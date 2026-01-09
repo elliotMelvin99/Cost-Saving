@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cloud Cost Optimizer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .glass-card {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(226, 232, 240, 1);
+        }
+        .nav-link.active {
+            background-color: rgba(16, 185, 129, 0.1);
+            color: #10b981;
+            border-right: 4px solid #10b981;
+        }
+        .page-content { display: none; }
+        .page-content.active { display: block; }
+        .app-row:hover .delete-btn { opacity: 1; }
+        input:focus { outline: none; border-bottom: 2px solid #3b82f6 !important; }
+        
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 34px;
+            height: 20px;
+        }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #cbd5e1;
+            transition: .4s;
+            border-radius: 20px;
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 14px; width: 14px;
+            left: 3px; bottom: 3px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        input:checked + .slider { background-color: #3b82f6; }
+        input:checked + .slider:before { transform: translateX(14px); }
+        
+        #status-toast {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            z-index: 1000;
+            transition: transform 0.3s ease-out, opacity 0.3s ease-out;
+            transform: translateY(100px);
+            opacity: 0;
+        }
+        #status-toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 min-h-screen font-sans text-slate-900 flex flex-col md:flex-row">
+
+    <!-- Status Toast -->
+    <div id="status-toast" class="bg-slate-900 text-white px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-3">
+        <div id="toast-spinner" class="animate-spin w-4 h-4 border-2 border-emerald-400 border-t-transparent rounded-full hidden"></div>
+        <span id="toast-message">Action successful</span>
+    </div>
+
+    <!-- Hidden File Input for Import -->
+    <input type="file" id="import-file-input" class="hidden" accept=".json" onchange="handleFileImport(event)">
+
+    <!-- Sidebar Navigation -->
+    <nav class="w-full md:w-64 bg-slate-900 text-slate-300 md:min-h-screen flex flex-col shadow-2xl z-50">
+        <div class="p-6 border-b border-slate-800">
+            <h1 class="text-xl font-bold text-emerald-400">Savings Hub</h1>
+            <p class="text-[10px] uppercase tracking-widest text-slate-500 mt-1">Cost Management</p>
+        </div>
+        <div class="flex-grow py-4 overflow-y-auto">
+            <button onclick="showPage('workspaces')" id="nav-workspaces" class="nav-link w-full text-left px-6 py-4 flex items-center gap-3 hover:bg-slate-800 transition-colors active">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+                AWS WorkSpaces
+            </button>
+            <button onclick="showPage('decommissioned')" id="nav-decommissioned" class="nav-link w-full text-left px-6 py-4 flex items-center gap-3 hover:bg-slate-800 transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1-1v3M4 7h16" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+                Decommissioned
+            </button>
+            <button onclick="showPage('nashtech')" id="nav-nashtech" class="nav-link w-full text-left px-6 py-4 flex items-center gap-3 hover:bg-slate-800 transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+                Software Apps
+            </button>
+            <button onclick="showPage('summary')" id="nav-summary" class="nav-link w-full text-left px-6 py-4 flex items-center gap-3 hover:bg-slate-800 transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+                Summary
+            </button>
+            
+            <div class="mt-8 px-4 space-y-2">
+                <p class="text-[9px] font-bold text-slate-500 uppercase tracking-widest px-2 mb-1">Sync & Backups</p>
+                <div class="flex flex-col gap-1">
+                    <button onclick="saveToCloud()" class="w-full flex items-center justify-center gap-2 py-2 px-4 rounded-xl border border-emerald-500/50 hover:bg-emerald-950/20 text-emerald-400 text-xs font-bold transition-all">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+                        Cloud Save
+                    </button>
+                    <button onclick="loadFromCloud()" class="w-full flex items-center justify-center gap-2 py-2 px-4 rounded-xl border border-slate-700 hover:bg-slate-800 text-xs text-slate-400 font-bold transition-all">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+                        Cloud Sync
+                    </button>
+                </div>
+                
+                <div class="pt-2 flex flex-col gap-1">
+                    <p class="text-[9px] font-bold text-slate-500 uppercase tracking-widest px-2 mb-1">Local Files</p>
+                    <button onclick="exportManualFile()" class="w-full flex items-center justify-center gap-2 py-2 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-[10px] font-bold transition-all">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5l5 5v11a2 2 0 01-2 2z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+                        Export JSON
+                    </button>
+                    <button onclick="document.getElementById('import-file-input').click()" class="w-full flex items-center justify-center gap-2 py-2 px-4 rounded-xl border border-slate-700 hover:bg-slate-800 text-slate-400 text-[10px] font-bold transition-all">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+                        Import JSON
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="p-6 bg-slate-950/50">
+            <p id="nav-cost-total" class="text-emerald-400 font-bold text-sm tracking-tight">£0 Active Spend</p>
+        </div>
+    </nav>
+
+    <!-- Main Content Area -->
+    <div class="flex-grow flex flex-col h-screen overflow-y-auto">
+        
+        <!-- AWS WorkSpaces Page -->
+        <div id="page-workspaces" class="page-content active p-4 md:p-8">
+            <header class="mb-8 flex justify-between items-end">
+                <div>
+                    <h2 class="text-3xl font-bold text-slate-800">AWS WorkSpaces Fleets</h2>
+                    <p class="text-slate-500 mt-2 text-sm">Review configurations and optimize billing models.</p>
+                </div>
+                <button onclick="addWsFleet()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2 rounded-xl font-bold flex items-center gap-2 transition-all shadow-lg text-sm">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4" stroke-width="2"></path></svg>
+                    Add Fleet
+                </button>
+            </header>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+                <div class="lg:col-span-2 space-y-6">
+                    <!-- Fleet Table -->
+                    <div class="glass-card rounded-3xl overflow-hidden shadow-sm">
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse">
+                                <thead class="bg-slate-50 border-b border-slate-100">
+                                    <tr>
+                                        <th class="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Fleet Name</th>
+                                        <th class="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Bundle</th>
+                                        <th class="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-center">Users</th>
+                                        <th class="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-center">Hours</th>
+                                        <th class="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-center">Always On</th>
+                                        <th class="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-right">Cost/User</th>
+                                        <th class="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-right">Ann. Cost</th>
+                                        <th class="px-6 py-4"></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="ws-fleet-body"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Bundle Reference & Pricing Section -->
+                    <div class="glass-card rounded-3xl p-6 shadow-sm">
+                        <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+                            Bundle Hardware & Pricing Reference
+                        </h3>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4" id="bundle-reference-grid">
+                            <!-- Injected via JS -->
+                        </div>
+                    </div>
+                </div>
+
+                <div class="glass-card rounded-3xl p-6 shadow-sm flex flex-col">
+                    <h3 class="text-sm font-bold text-slate-800 mb-4 flex items-center gap-2">
+                        <span class="w-2 h-2 bg-emerald-500 rounded-full"></span>
+                        Optimization Efficiency
+                    </h3>
+                    <div class="flex-grow relative" style="min-height: 200px;">
+                        <canvas id="savingsChart"></canvas>
+                    </div>
+                    <div class="mt-4 p-4 bg-emerald-50 rounded-2xl border border-emerald-100">
+                        <p class="text-[10px] text-emerald-600 font-bold uppercase mb-1 text-center">Annual Potential Savings</p>
+                        <p id="chart-savings-callout" class="text-xl font-black text-emerald-700 text-center">£0</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="bg-slate-900 p-8 rounded-3xl text-white shadow-xl">
+                    <p class="text-slate-400 text-xs font-bold uppercase tracking-wider mb-2 text-center md:text-left">Fleet Annual Spend</p>
+                    <p id="ws-total-annual" class="text-4xl font-black text-emerald-400 text-center md:text-left">£0</p>
+                </div>
+                <div class="bg-white border border-slate-200 p-8 rounded-3xl shadow-sm">
+                    <p class="text-slate-400 text-xs font-bold uppercase tracking-wider mb-2 text-center md:text-left">Total Users</p>
+                    <p id="ws-total-users" class="text-4xl font-black text-slate-800 text-center md:text-left">0</p>
+                </div>
+                <div class="bg-emerald-600 p-8 rounded-3xl text-white shadow-xl">
+                    <p class="text-emerald-100 text-xs font-bold uppercase tracking-wider mb-2 text-center md:text-left">Savings Opportunity</p>
+                    <p id="ws-total-savings" class="text-4xl font-black text-white text-center md:text-left">£0</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Decommissioned Assets Page -->
+        <div id="page-decommissioned" class="page-content p-4 md:p-8">
+            <header class="mb-8 flex justify-between items-end">
+                <div>
+                    <h2 class="text-3xl font-bold text-slate-800">Decommissioned Assets</h2>
+                    <p class="text-slate-500 mt-2 text-sm">Log historical savings from retired infrastructure.</p>
+                </div>
+                <button onclick="addDecomWs()" class="bg-slate-700 hover:bg-slate-800 text-white px-6 py-2 rounded-xl font-bold flex items-center gap-2 transition-all shadow-lg text-sm">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4" stroke-width="2"></path></svg>
+                    Add Asset
+                </button>
+            </header>
+
+            <div class="glass-card rounded-3xl overflow-hidden shadow-sm mb-8">
+                <table class="w-full text-left border-collapse">
+                    <thead class="bg-slate-50 border-b border-slate-100">
+                        <tr>
+                            <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Asset Description</th>
+                            <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Bundle Type</th>
+                            <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-center">Qty</th>
+                            <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-right">Monthly Saving</th>
+                            <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-right">Annual Saving</th>
+                            <th class="px-6 py-4"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="decom-ws-body"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Software Tracker Page -->
+        <div id="page-nashtech" class="page-content p-4 md:p-8">
+            <header class="mb-8 flex justify-between items-end">
+                <div>
+                    <h2 class="text-3xl font-bold text-slate-800">Software App Tracker</h2>
+                    <p class="text-slate-500 mt-2 text-sm">Inventory of third-party apps and licensing costs.</p>
+                </div>
+                <button onclick="addNewApp()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-xl font-bold flex items-center gap-2 transition-all shadow-lg text-sm">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 4v16m8-8H4" stroke-width="2"></path></svg>
+                    Add App
+                </button>
+            </header>
+
+            <div class="glass-card rounded-3xl overflow-hidden shadow-sm mb-8">
+                <table class="w-full text-left border-collapse">
+                    <thead class="bg-slate-50 border-b border-slate-100">
+                        <tr>
+                            <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Application</th>
+                            <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Users</th>
+                            <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Price/Mo</th>
+                            <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-center">Is Pruned?</th>
+                            <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-right">Monthly</th>
+                            <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-right">Annual</th>
+                            <th class="px-6 py-4"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="app-list-body"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Summary Page -->
+        <div id="page-summary" class="page-content p-4 md:p-8">
+            <header class="mb-8">
+                <h2 class="text-3xl font-bold text-slate-800">Financial Summary</h2>
+                <p class="text-slate-500 mt-2 text-sm">Consolidated view of spend and cost avoidance initiatives.</p>
+            </header>
+            
+            <div id="summary-categories" class="space-y-6 mb-12">
+                <!-- Injected via JS -->
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div class="bg-slate-900 p-10 rounded-3xl shadow-2xl text-white">
+                    <p class="text-slate-400 text-xs font-bold uppercase tracking-widest mb-4">Current Operational Spend (Annual)</p>
+                    <div class="grid grid-cols-2 gap-8">
+                        <div>
+                            <p class="text-slate-500 text-[10px] font-bold uppercase mb-1">Total Active</p>
+                            <p id="sum-total-cost" class="text-4xl xl:text-5xl font-black text-white">£0</p>
+                        </div>
+                        <div>
+                            <p class="text-slate-500 text-[10px] font-bold uppercase mb-1">Monthly Run-rate</p>
+                            <p id="sum-monthly-label" class="text-4xl xl:text-5xl font-black text-slate-400">£0</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="bg-emerald-600 p-10 rounded-3xl shadow-xl text-white">
+                    <p class="text-emerald-200 text-xs font-bold uppercase tracking-widest mb-2">Total Value Delivered (Cost Avoidance)</p>
+                    <p id="sum-total-savings" class="text-6xl font-black text-white">£0</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js';
+        import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js';
+        import { getFirestore, doc, setDoc, getDoc, collection } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
+
+        const hasFirebase = typeof __firebase_config !== 'undefined';
+        let db, auth, user, appId;
+        let wsFleets = [];
+        let decomWs = [];
+        let apps = [];
+        let savingsChart = null;
+
+        const BUNDLES = {
+            "value": { name: "Value", cpu: "1 vCPU", ram: "2 GB", m: 26, hb: 8, hr: 0.22 },
+            "standard": { name: "Standard", cpu: "2 vCPU", ram: "4 GB", m: 33, hb: 11, hr: 0.30 },
+            "perf": { name: "Performance", cpu: "2 vCPU", ram: "8 GB", m: 45, hb: 13, hr: 0.42 },
+            "power": { name: "Power", cpu: "4 vCPU", ram: "16 GB", m: 65, hb: 13, hr: 0.62 },
+            "powerpro": { name: "PowerPro", cpu: "8 vCPU", ram: "32 GB", m: 110, hb: 16, hr: 1.15 }
+        };
+
+        const initApp = async () => {
+            if (hasFirebase) {
+                const firebaseConfig = JSON.parse(__firebase_config);
+                const app = initializeApp(firebaseConfig);
+                auth = getAuth(app);
+                db = getFirestore(app);
+                appId = typeof __app_id !== 'undefined' ? __app_id : 'cost-optimizer-default';
+                onAuthStateChanged(auth, u => { user = u; if (user) loadFromCloud(); });
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) await signInWithCustomToken(auth, __initial_auth_token);
+                else await signInAnonymously(auth);
+            } else {
+                if (wsFleets.length === 0) addWsFleet();
+            }
+        };
+
+        async function saveToCloud() {
+            if (!hasFirebase || !user) return;
+            showToast("Saving to cloud...", false, true);
+            try {
+                const configDoc = doc(db, 'artifacts', appId, 'users', user.uid, 'settings', 'config');
+                await setDoc(configDoc, { wsFleets, decomWs, apps, updatedAt: new Date().toISOString() });
+                showToast("Cloud Save Successful");
+            } catch (error) { showToast("Save Error", true); }
+        }
+
+        async function loadFromCloud() {
+            if (!hasFirebase || !user) return;
+            try {
+                const configDoc = doc(db, 'artifacts', appId, 'users', user.uid, 'settings', 'config');
+                const snap = await getDoc(configDoc);
+                if (snap.exists()) {
+                    const data = snap.data();
+                    wsFleets = data.wsFleets || [];
+                    decomWs = data.decomWs || [];
+                    apps = data.apps || [];
+                    refreshAll();
+                    showToast("Cloud Data Synced");
+                }
+            } catch (error) { showToast("Sync Error", true); }
+        }
+
+        function exportManualFile() {
+            const data = {
+                wsFleets,
+                decomWs,
+                apps,
+                exportedAt: new Date().toISOString(),
+                version: "2.0"
+            };
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `cost-optimization-backup-${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            showToast("JSON Exported");
+        }
+
+        window.handleFileImport = (event) => {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    if (data.wsFleets || data.decomWs || data.apps) {
+                        wsFleets = data.wsFleets || [];
+                        decomWs = data.decomWs || [];
+                        apps = data.apps || [];
+                        refreshAll();
+                        showToast("Import Successful");
+                    } else {
+                        throw new Error("Invalid structure");
+                    }
+                } catch (err) {
+                    showToast("Import failed: Invalid File", true);
+                }
+                event.target.value = ''; 
+            };
+            reader.readAsText(file);
+        };
+
+        function refreshAll() {
+            renderWsFleets(); 
+            renderDecomWs(); 
+            renderAppList();
+            updateNavTotal();
+        }
+
+        function showToast(msg, isError = false, showSpinner = false) {
+            const toast = document.getElementById('status-toast');
+            document.getElementById('toast-message').innerText = msg;
+            toast.className = `fixed bottom-8 right-8 text-white px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-3 transition-all duration-300 ${isError ? 'bg-rose-600' : 'bg-slate-900'} show`;
+            document.getElementById('toast-spinner').classList.toggle('hidden', !showSpinner);
+            if (!showSpinner) setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+
+        function initChart() {
+            const ctx = document.getElementById('savingsChart').getContext('2d');
+            savingsChart = new Chart(ctx, {
+                type: 'bar',
+                data: { labels: ['Current', 'Optimized'], datasets: [{ label: 'Cost', data: [0, 0], backgroundColor: ['#1e293b', '#10b981'], borderRadius: 6 }] },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, grid: { display: false }, ticks: { display: false } }, x: { grid: { display: false } } } }
+            });
+        }
+
+        function renderBundleReference() {
+            const container = document.getElementById('bundle-reference-grid');
+            container.innerHTML = '';
+            Object.keys(BUNDLES).forEach(key => {
+                const b = BUNDLES[key];
+                const card = document.createElement('div');
+                card.className = "p-3 rounded-2xl border border-slate-100 bg-slate-50/50 flex flex-col items-center text-center";
+                card.innerHTML = `
+                    <p class="text-[10px] font-black text-slate-800 uppercase mb-1">${b.name}</p>
+                    <div class="text-[9px] text-slate-500 font-bold mb-2 space-x-1">
+                        <span class="bg-white px-1 rounded shadow-sm">${b.cpu}</span>
+                        <span class="bg-emerald-100 text-emerald-700 px-1 rounded shadow-sm">${b.ram}</span>
+                    </div>
+                    <div class="space-y-1">
+                        <p class="text-[10px] font-bold text-slate-400">£${b.m}/mo <span class="text-[8px] uppercase tracking-tighter">(Fixed)</span></p>
+                        <p class="text-[10px] font-bold text-slate-400">£${b.hb} + £${b.hr}/hr</p>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function addWsFleet() {
+            wsFleets.push({ id: Date.now(), name: 'New Fleet', bundle: 'standard', users: 5, hours: 40, isAlwaysOn: false });
+            renderWsFleets();
+        }
+
+        function updateWsFleet(id, field, value) {
+            const fleet = wsFleets.find(f => f.id === id);
+            if (fleet) {
+                fleet[field] = (field === 'isAlwaysOn') ? value : (field === 'name' || field === 'bundle' ? value : parseFloat(value) || 0);
+                calculateWSTotals();
+                updateNavTotal();
+            }
+        }
+
+        function calculateWSTotals() {
+            let totalAnnual = 0, optimizedAnnual = 0, totalUsers = 0;
+            wsFleets.forEach(f => {
+                const b = BUNDLES[f.bundle];
+                const autoStopMonthly = b.hb + (f.hours * b.hr);
+                const alwaysOnMonthly = b.m;
+                const currentMonthly = f.isAlwaysOn ? alwaysOnMonthly : autoStopMonthly;
+                const optimalMonthly = Math.min(autoStopMonthly, alwaysOnMonthly);
+                
+                totalAnnual += (currentMonthly * f.users * 12);
+                optimizedAnnual += (optimalMonthly * f.users * 12);
+                totalUsers += f.users;
+                
+                const costEl = document.getElementById(`ws-cost-${f.id}`);
+                const cpuEl = document.getElementById(`ws-cpu-${f.id}`);
+                if (costEl) costEl.innerText = `£${Math.round(currentMonthly * f.users * 12).toLocaleString()}`;
+                if (cpuEl) cpuEl.innerText = `£${Math.round(currentMonthly).toLocaleString()}`;
+            });
+            document.getElementById('ws-total-annual').innerText = `£${Math.round(totalAnnual).toLocaleString()}`;
+            document.getElementById('ws-total-savings').innerText = `£${Math.round(totalAnnual - optimizedAnnual).toLocaleString()}`;
+            document.getElementById('ws-total-users').innerText = totalUsers;
+            document.getElementById('chart-savings-callout').innerText = `£${Math.round(totalAnnual - optimizedAnnual).toLocaleString()}`;
+            if (savingsChart) {
+                savingsChart.data.datasets[0].data = [totalAnnual, optimizedAnnual];
+                savingsChart.update();
+            }
+        }
+
+        function renderWsFleets() {
+            const tbody = document.getElementById('ws-fleet-body');
+            tbody.innerHTML = '';
+            wsFleets.forEach(f => {
+                const b = BUNDLES[f.bundle];
+                const currentMonthly = f.isAlwaysOn ? b.m : (b.hb + (f.hours * b.hr));
+                const row = document.createElement('tr');
+                row.className = 'app-row border-b border-slate-50 hover:bg-slate-50/50 group text-sm';
+                row.innerHTML = `
+                    <td class="px-6 py-4"><input type="text" value="${f.name}" class="bg-transparent border-b border-transparent hover:border-slate-300 w-full font-medium" data-field="name"></td>
+                    <td class="px-6 py-4">
+                        <select class="bg-white border border-slate-200 rounded-lg p-1 text-xs w-full" data-field="bundle">
+                            ${Object.keys(BUNDLES).map(k => `<option value="${k}" ${f.bundle === k ? 'selected' : ''}>${BUNDLES[k].name}</option>`).join('')}
+                        </select>
+                    </td>
+                    <td class="px-6 py-4 text-center"><input type="number" value="${f.users}" class="bg-slate-50 border border-slate-200 rounded-lg p-1 text-center w-16" data-field="users"></td>
+                    <td class="px-6 py-4 text-center"><input type="number" value="${f.hours}" class="bg-slate-50 border border-slate-200 rounded-lg p-1 text-center w-16" data-field="hours"></td>
+                    <td class="px-6 py-4 text-center"><label class="switch"><input type="checkbox" ${f.isAlwaysOn ? 'checked' : ''} data-field="isAlwaysOn"><span class="slider"></span></label></td>
+                    <td class="px-6 py-4 font-bold text-slate-400 text-right" id="ws-cpu-${f.id}">£${Math.round(currentMonthly)}</td>
+                    <td class="px-6 py-4 font-bold text-slate-700 text-right" id="ws-cost-${f.id}">£0</td>
+                    <td class="px-6 py-4 text-right">
+                        <button class="delete-btn opacity-0 group-hover:opacity-100 text-slate-300 hover:text-rose-500" onclick="deleteWsFleet(${f.id})">
+                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1-1v3M4 7h16" stroke-width="2"></path></svg>
+                        </button>
+                    </td>
+                `;
+                row.querySelectorAll('input, select').forEach(el => {
+                    const field = el.getAttribute('data-field');
+                    const eventType = (field === 'users' || field === 'hours' || field === 'name') ? 'input' : 'change';
+                    
+                    el.addEventListener(eventType, e => {
+                        const val = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
+                        updateWsFleet(f.id, field, val);
+                        if (eventType === 'change') renderWsFleets();
+                    });
+                });
+                tbody.appendChild(row);
+            });
+            calculateWSTotals();
+        }
+
+        window.deleteWsFleet = id => { wsFleets = wsFleets.filter(f => f.id !== id); renderWsFleets(); updateNavTotal(); };
+
+        function addDecomWs() {
+            decomWs.push({ id: Date.now(), name: 'Retiring System', bundle: 'standard', qty: 1 });
+            renderDecomWs();
+        }
+
+        function renderDecomWs() {
+            const tbody = document.getElementById('decom-ws-body');
+            tbody.innerHTML = '';
+            decomWs.forEach(item => {
+                const b = BUNDLES[item.bundle];
+                const mSaved = b.m * item.qty;
+                const aSaved = mSaved * 12;
+                const row = document.createElement('tr');
+                row.className = 'app-row border-b border-slate-50 hover:bg-slate-50/50 group text-sm';
+                row.innerHTML = `
+                    <td class="px-6 py-4"><input type="text" value="${item.name}" class="bg-transparent border-b border-transparent hover:border-slate-300 w-full" data-field="name"></td>
+                    <td class="px-6 py-4">
+                        <select class="bg-white border border-slate-200 rounded-lg p-1 text-xs w-full mb-1" data-field="bundle">
+                            ${Object.keys(BUNDLES).map(k => `<option value="${k}" ${item.bundle === k ? 'selected' : ''}>${BUNDLES[k].name} (${BUNDLES[k].ram})</option>`).join('')}
+                        </select>
+                    </td>
+                    <td class="px-6 py-4 text-center"><input type="number" value="${item.qty}" class="bg-slate-50 border border-slate-200 rounded-lg p-1 text-center w-16" data-field="qty"></td>
+                    <td class="px-6 py-4 font-bold text-emerald-600 text-right">£${Math.round(mSaved).toLocaleString()}</td>
+                    <td class="px-6 py-4 font-bold text-emerald-700 text-right">£${Math.round(aSaved).toLocaleString()}</td>
+                    <td class="px-6 py-4 text-right">
+                        <button class="delete-btn opacity-0 group-hover:opacity-100 text-slate-300 hover:text-rose-500" onclick="deleteDecom(${item.id})">
+                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1-1v3M4 7h16" stroke-width="2"></path></svg>
+                        </button>
+                    </td>
+                `;
+                row.querySelectorAll('input, select').forEach(el => {
+                    const field = el.getAttribute('data-field');
+                    const eventType = (field === 'qty' || field === 'name') ? 'input' : 'change';
+                    el.addEventListener(eventType, e => {
+                        item[field] = (field === 'name' || field === 'bundle') ? e.target.value : parseInt(e.target.value) || 0;
+                        if (eventType === 'change') renderDecomWs();
+                        else {
+                           const rowSaved = BUNDLES[item.bundle].m * (parseInt(e.target.value) || 0);
+                           row.children[3].innerText = `£${Math.round(rowSaved).toLocaleString()}`;
+                           row.children[4].innerText = `£${Math.round(rowSaved * 12).toLocaleString()}`;
+                        }
+                    });
+                });
+                tbody.appendChild(row);
+            });
+        }
+
+        window.deleteDecom = id => { decomWs = decomWs.filter(i => i.id !== id); renderDecomWs(); };
+
+        function addNewApp() {
+            apps.push({ id: Date.now(), name: 'App Name', users: 10, price: 5, isSavings: false });
+            renderAppList();
+        }
+
+        function renderAppList() {
+            const tbody = document.getElementById('app-list-body');
+            tbody.innerHTML = '';
+            apps.forEach(app => {
+                const monthly = app.users * app.price;
+                const row = document.createElement('tr');
+                row.className = `app-row border-b border-slate-50 hover:bg-slate-50/50 group ${app.isSavings ? 'bg-emerald-50/30' : ''}`;
+                row.innerHTML = `
+                    <td class="px-6 py-4"><input type="text" value="${app.name}" class="bg-transparent border-b border-transparent hover:border-slate-300 w-full" data-field="name"></td>
+                    <td class="px-6 py-4"><input type="number" value="${app.users}" class="bg-transparent border-b border-transparent w-16" data-field="users"></td>
+                    <td class="px-6 py-4"><input type="number" value="${app.price}" class="bg-transparent border-b border-transparent w-16" data-field="price"></td>
+                    <td class="px-6 py-4 text-center"><label class="switch"><input type="checkbox" ${app.isSavings ? 'checked' : ''} data-field="isSavings"><span class="slider"></span></label></td>
+                    <td class="px-6 py-4 font-bold text-right text-slate-500">£${Math.round(monthly).toLocaleString()}</td>
+                    <td class="px-6 py-4 font-bold text-right text-blue-600">£${Math.round(monthly * 12).toLocaleString()}</td>
+                    <td class="px-6 py-4 text-right">
+                        <button class="delete-btn opacity-0 group-hover:opacity-100 text-slate-300 hover:text-rose-500" onclick="deleteApp(${app.id})">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1-1v3M4 7h16" stroke-width="2"></path></svg>
+                        </button>
+                    </td>
+                `;
+                row.querySelectorAll('input').forEach(input => {
+                    const field = input.getAttribute('data-field');
+                    const eventType = (field === 'isSavings') ? 'change' : 'input';
+                    input.addEventListener(eventType, e => {
+                        app[field] = (e.target.type === 'checkbox') ? e.target.checked : (field === 'name' ? e.target.value : parseFloat(e.target.value) || 0);
+                        if (eventType === 'change') renderAppList();
+                        else {
+                            const newMonthly = app.users * app.price;
+                            row.children[4].innerText = `£${Math.round(newMonthly).toLocaleString()}`;
+                            row.children[5].innerText = `£${Math.round(newMonthly * 12).toLocaleString()}`;
+                        }
+                        updateNavTotal();
+                    });
+                });
+                tbody.appendChild(row);
+            });
+        }
+
+        window.deleteApp = id => { apps = apps.filter(a => a.id !== id); renderAppList(); updateNavTotal(); };
+
+        function updateNavTotal() {
+            let wsTotal = 0;
+            wsFleets.forEach(f => {
+                const b = BUNDLES[f.bundle];
+                const cost = (f.isAlwaysOn ? b.m : (b.hb + f.hours * b.hr)) * f.users * 12;
+                wsTotal += cost;
+            });
+            const appTotal = apps.filter(a => !a.isSavings).reduce((s, a) => s + (a.users * a.price * 12), 0);
+            document.getElementById('nav-cost-total').innerText = `£${Math.round(wsTotal + appTotal).toLocaleString()} Active Spend`;
+        }
+
+        window.showPage = pageId => {
+            document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+            document.getElementById('nav-' + pageId).classList.add('active');
+            document.querySelectorAll('.page-content').forEach(p => p.classList.remove('active'));
+            document.getElementById('page-' + pageId).classList.add('active');
+            if (pageId === 'summary') renderSummary();
+        };
+
+        function renderSummary() {
+            const container = document.getElementById('summary-categories');
+            container.innerHTML = '';
+
+            let wsActiveAnn = 0, wsSavingAnn = 0;
+            const wsItems = wsFleets.map(f => {
+                const b = BUNDLES[f.bundle];
+                const current = (f.isAlwaysOn ? b.m : (b.hb + f.hours * b.hr)) * f.users * 12;
+                const optimal = Math.min(b.m, (b.hb + f.hours * b.hr)) * f.users * 12;
+                wsActiveAnn += current; wsSavingAnn += (current - optimal);
+                return { name: `${f.name} (${b.ram})`, cost: current, saving: (current - optimal) };
+            });
+            container.appendChild(createSummaryCard('WorkSpaces Fleet Optimization', wsItems, wsSavingAnn, 'text-emerald-600', 'Potential Optimized Savings'));
+
+            let decomAnn = 0;
+            const decomItems = decomWs.map(i => {
+                const val = BUNDLES[i.bundle].m * i.qty * 12;
+                decomAnn += val;
+                return { name: `${i.name} (Retired ${i.qty})`, cost: val };
+            });
+            container.appendChild(createSummaryCard('Decommissioned Asset Savings', decomItems, decomAnn, 'text-emerald-700', 'Amount Saved'));
+
+            let appActiveAnn = 0, appSavedAnn = 0;
+            const appItems = apps.map(a => {
+                const val = a.users * a.price * 12;
+                if (a.isSavings) appSavedAnn += val;
+                else appActiveAnn += val;
+                return { name: a.name, cost: val, isPruned: a.isSavings };
+            });
+            container.appendChild(createSummaryCard('Software Apps & Pruning', appItems, appSavedAnn, 'text-blue-600', 'Software Cost Saved'));
+
+            const grandActive = wsActiveAnn + appActiveAnn;
+            const grandAvoided = wsSavingAnn + decomAnn + appSavedAnn;
+            document.getElementById('sum-total-cost').innerText = `£${Math.round(grandActive).toLocaleString()}`;
+            document.getElementById('sum-monthly-label').innerText = `£${Math.round(grandActive / 12).toLocaleString()}`;
+            document.getElementById('sum-total-savings').innerText = `£${Math.round(grandAvoided).toLocaleString()}`;
+        }
+
+        function createSummaryCard(title, items, total, colorClass, label) {
+            const div = document.createElement('div');
+            div.className = "glass-card p-6 rounded-3xl shadow-sm";
+            const itemsHtml = items.map(i => `
+                <div class="flex justify-between py-2 border-b border-slate-50 text-sm">
+                    <span class="text-slate-600">${i.name}</span>
+                    <span class="font-mono ${i.isPruned ? 'text-emerald-600' : 'text-slate-400'}">
+                        £${Math.round(i.saving !== undefined ? i.saving : i.cost).toLocaleString()}
+                    </span>
+                </div>
+            `).join('');
+            div.innerHTML = `
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-2 mb-4">
+                    <h3 class="font-bold text-slate-800">${title}</h3>
+                    <div class="text-right">
+                        <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">${label}</p>
+                        <p class="text-xl font-black ${colorClass}">£${Math.round(total).toLocaleString()}</p>
+                    </div>
+                </div>
+                <div class="space-y-1">${itemsHtml || '<p class="text-xs text-slate-400 italic">No assets registered.</p>'}</div>
+            `;
+            return div;
+        }
+
+        window.saveToCloud = saveToCloud; 
+        window.loadFromCloud = loadFromCloud;
+        window.exportManualFile = exportManualFile;
+        window.addWsFleet = addWsFleet; 
+        window.addDecomWs = addDecomWs; 
+        window.addNewApp = addNewApp;
+        
+        window.addEventListener('DOMContentLoaded', () => { 
+            initApp(); 
+            initChart(); 
+            renderBundleReference(); 
+            refreshAll();
+        });
+    </script>
+</body>
+</html>
