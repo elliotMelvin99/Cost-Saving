@@ -114,19 +114,19 @@
                         <div class="flex items-center gap-2">
                             <span class="text-[8px] text-slate-500 uppercase font-bold">Auto</span>
                             <label class="switch scale-75">
-                                <input type="checkbox" id="auto-sync-toggle" onchange="toggleAutoSync(event)">
+                                <input type="checkbox" id="auto-sync-toggle">
                                 <span class="slider"></span>
                             </label>
                         </div>
                     </div>
                     <div class="flex flex-col gap-1">
-                        <button onclick="handleCloudSave()" id="btn-push" class="w-full flex items-center justify-center gap-2 py-2 px-4 rounded-xl border border-emerald-500/50 hover:bg-emerald-950/20 text-emerald-400 text-xs font-bold transition-all">
+                        <button id="btn-push" class="w-full flex items-center justify-center gap-2 py-2 px-4 rounded-xl border border-emerald-500/50 hover:bg-emerald-950/20 text-emerald-400 text-xs font-bold transition-all">
                             Push to Team
                         </button>
-                        <button onclick="handleCloudLoad()" id="btn-refresh" class="w-full flex items-center justify-center gap-2 py-2 px-4 rounded-xl border border-slate-700 hover:bg-slate-800 text-xs text-slate-400 font-bold transition-all">
+                        <button id="btn-refresh" class="w-full flex items-center justify-center gap-2 py-2 px-4 rounded-xl border border-slate-700 hover:bg-slate-800 text-xs text-slate-400 font-bold transition-all">
                             Refresh Data
                         </button>
-                        <button onclick="forceReauth()" class="text-[9px] text-slate-600 hover:text-slate-400 mt-1 uppercase font-bold text-center">
+                        <button id="btn-reauth" class="text-[9px] text-slate-600 hover:text-slate-400 mt-1 uppercase font-bold text-center">
                             Reset Connection
                         </button>
                     </div>
@@ -149,7 +149,6 @@
 
     <!-- Main Content Area -->
     <div class="flex-grow flex flex-col h-screen overflow-y-auto" id="main-content">
-        
         <!-- Annual Spend Page -->
         <div id="page-annual" class="page-content active p-4 md:p-8">
             <header class="mb-8 flex justify-between items-end no-print">
@@ -203,23 +202,19 @@
         <!-- AWS WorkSpaces Page -->
         <div id="page-workspaces" class="page-content p-4 md:p-8">
             <header class="mb-8 flex justify-between items-end no-print">
-                <div>
-                    <h2 class="text-3xl font-bold text-slate-800">AWS WorkSpaces Fleets</h2>
-                </div>
-                <button onclick="addWsFleet()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2 rounded-xl font-bold text-sm shadow-lg">
-                    Add Fleet
-                </button>
+                <h2 class="text-3xl font-bold text-slate-800">AWS WorkSpaces Fleets</h2>
+                <button onclick="addWsFleet()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2 rounded-xl font-bold text-sm shadow-lg">Add Fleet</button>
             </header>
             <div class="glass-card rounded-3xl overflow-hidden shadow-sm mb-8">
                 <table class="w-full text-left border-collapse">
                     <thead class="bg-slate-50 border-b border-slate-100">
                         <tr>
-                            <th class="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Fleet Name</th>
-                            <th class="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Bundle</th>
-                            <th class="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-center">Users</th>
-                            <th class="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-center">Hours/Mo</th>
-                            <th class="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-center">Always On</th>
-                            <th class="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-right">Fleet Ann.</th>
+                            <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Fleet Name</th>
+                            <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Bundle</th>
+                            <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-center">Users</th>
+                            <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-center">Hours/Mo</th>
+                            <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-center">Always On</th>
+                            <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-right">Fleet Ann.</th>
                             <th class="px-6 py-4 no-print"></th>
                         </tr>
                     </thead>
@@ -307,9 +302,33 @@
         import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js';
         import { getFirestore, doc, setDoc, getDoc, onSnapshot } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
 
-        // Firebase environment variables
-        const firebaseConfig = JSON.parse(__firebase_config);
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'cost-optimizer-prod';
+        /**
+         * 1. PERSONAL FIREBASE CONFIG
+         */
+        const personalFirebaseConfig = {
+            apiKey: "AIzaSyBt8khl7RpfjyIecK736ELgdXGg4Rqe2UU",
+            authDomain: "cost-saving-d103f.firebaseapp.com",
+            projectId: "cost-saving-d103f",
+            storageBucket: "cost-saving-d103f.firebasestorage.app",
+            messagingSenderId: "308687557118",
+            appId: "1:308687557118:web:62636951bb6a93b822b0af",
+            measurementId: "G-D596J4RRSL"
+        };
+
+        // Determine which config to use
+        let firebaseConfig = null;
+        let isUsingPersonalConfig = false;
+
+        if (personalFirebaseConfig.apiKey && personalFirebaseConfig.apiKey !== "") {
+            firebaseConfig = personalFirebaseConfig;
+            isUsingPersonalConfig = true;
+        } else {
+            try {
+                firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
+            } catch (e) { }
+        }
+
+        const appId = isUsingPersonalConfig ? personalFirebaseConfig.projectId : (typeof __app_id !== 'undefined' ? __app_id : 'cost-optimizer-fallback');
         const initialToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
         const STORAGE_KEY = 'savings_hub_v3_data';
@@ -329,132 +348,102 @@
             "powerpro": { name: "PowerPro", m: 110, hb: 16, hr: 1.15 }
         };
 
-        // --- AUTH & INIT LOGIC ---
-
         const initApp = async () => {
             loadFromLocalStorage();
             loadSettings();
             
-            try {
-                const app = initializeApp(firebaseConfig);
-                auth = getAuth(app);
-                db = getFirestore(app);
-                
-                // Track Auth State
-                onAuthStateChanged(auth, (u) => {
-                    user = u;
-                    const statusEl = document.getElementById('auth-status');
-                    if (u) {
-                        statusEl.innerText = "Connected ✅";
-                        statusEl.className = "text-[9px] text-emerald-500 mt-1 uppercase font-bold";
-                        setupSharedListener();
+            if (firebaseConfig && firebaseConfig.apiKey) {
+                try {
+                    const app = initializeApp(firebaseConfig);
+                    auth = getAuth(app);
+                    db = getFirestore(app);
+                    
+                    onAuthStateChanged(auth, (u) => {
+                        user = u;
+                        const statusEl = document.getElementById('auth-status');
+                        if (u) {
+                            statusEl.innerText = "Connected ✅";
+                            statusEl.className = "text-[9px] text-emerald-500 mt-1 uppercase font-bold";
+                            setupSharedListener();
+                        } else {
+                            statusEl.innerText = "Disconnected ⚪";
+                            statusEl.className = "text-[9px] text-slate-500 mt-1 uppercase font-bold";
+                        }
+                    });
+
+                    if (initialToken && !isUsingPersonalConfig) {
+                        await signInWithCustomToken(auth, initialToken);
                     } else {
-                        statusEl.innerText = "Disconnected ⚪";
-                        statusEl.className = "text-[9px] text-slate-500 mt-1 uppercase font-bold";
+                        await signInAnonymously(auth);
                     }
-                });
-
-                // RULE 3: Auth Before Queries - await sign-in explicitly
-                const statusEl = document.getElementById('auth-status');
-                statusEl.innerText = "Connecting...";
-                
-                if (initialToken) {
-                    await signInWithCustomToken(auth, initialToken);
-                } else {
-                    await signInAnonymously(auth);
+                } catch (e) {
+                    console.error("Firebase Auth failed", e);
+                    updateAuthStatusUI("Connection Error ❌", "text-rose-500");
                 }
-
-            } catch (e) {
-                console.error("Auth initialization failed", e);
-                const statusEl = document.getElementById('auth-status');
-                statusEl.innerText = "Connection Failed ❌";
-                statusEl.className = "text-[9px] text-rose-500 mt-1 uppercase font-bold";
+            } else {
+                updateAuthStatusUI("Offline Mode (Local Only)", "text-slate-400");
             }
             
-            // Default data if empty
             if (wsFleets.length === 0 && decomWs.length === 0 && apps.length === 0 && yearlyLogs.length === 0) {
-                wsFleets = [{ id: 1, name: 'Initial Fleet', bundle: 'standard', users: 10, hours: 160, isAlwaysOn: true }];
+                wsFleets = [{ id: 1, name: 'Sample Fleet', bundle: 'standard', users: 10, hours: 160, isAlwaysOn: true }];
                 refreshAll(true);
             }
         };
 
-        // --- FIRESTORE LOGIC ---
+        function updateAuthStatusUI(text, colorClass) {
+            const statusEl = document.getElementById('auth-status');
+            if (statusEl) {
+                statusEl.innerText = text;
+                statusEl.className = `text-[9px] ${colorClass} mt-1 uppercase font-bold`;
+            }
+        }
 
         function getSharedDocRef() {
-            // RULE 1: Strict Paths - Using artifacts/{appId}/public/data/shared_config (even segments: 6)
-            // segments: [1:artifacts, 2:appId, 3:public, 4:data, 5:configs, 6:shared]
+            if (!db) return null;
+            // Matches strict rule structure: /artifacts/{appId}/public/data/configs/shared
             return doc(db, 'artifacts', appId, 'public', 'data', 'configs', 'shared');
         }
 
         function setupSharedListener() {
             if (unsubscribeShared) unsubscribeShared();
-            if (!user) return; // Guard
+            const ref = getSharedDocRef();
+            if (!user || !ref) return;
             
-            const sharedDocRef = getSharedDocRef();
-            
-            // MANDATORY: Success and Error callbacks
-            unsubscribeShared = onSnapshot(sharedDocRef, (snap) => {
+            unsubscribeShared = onSnapshot(ref, (snap) => {
                 if (snap.exists()) {
                     const data = snap.data();
-                    const incomingStr = JSON.stringify({ws: data.wsFleets, de: data.decomWs, ap: data.apps, lo: data.yearlyLogs});
-                    const currentStr = JSON.stringify({ws: wsFleets, de: decomWs, ap: apps, lo: yearlyLogs});
-                    
-                    if (incomingStr !== currentStr) {
-                        wsFleets = data.wsFleets || [];
-                        decomWs = data.decomWs || [];
-                        apps = data.apps || [];
-                        yearlyLogs = data.yearlyLogs || [];
-                        refreshAll(true);
-                    }
+                    wsFleets = data.wsFleets || wsFleets;
+                    decomWs = data.decomWs || decomWs;
+                    apps = data.apps || apps;
+                    yearlyLogs = data.yearlyLogs || yearlyLogs;
+                    refreshAll(true);
                 }
             }, (err) => {
-                console.error("Firestore Listener Error:", err);
+                console.error("Listener Error:", err);
                 if (err.code === 'permission-denied') {
-                    showToast("Sync Access Denied. Check Permission Rules.", true);
+                    showToast("Database Permission Denied", true);
                 }
             });
         }
 
         async function saveToCloud(isSilent = false) {
-            if (!user) {
-                if (!isSilent) showToast("Connection inactive.", true);
+            if (!user || !db) {
+                if (!isSilent) showToast("Cloud storage unavailable.", true);
                 return;
             }
-            if (!isSilent) showToast("Syncing with Team...", false, true);
+            if (!isSilent) showToast("Pushing to Database...", false, true);
             try {
-                const sharedDocRef = getSharedDocRef();
-                await setDoc(sharedDocRef, { 
+                const ref = getSharedDocRef();
+                await setDoc(ref, { 
                     wsFleets, decomWs, apps, yearlyLogs, 
                     updatedBy: user.uid, updatedAt: new Date().toISOString() 
                 });
-                if (!isSilent) showToast("Team Sync Success");
-            } catch (error) { 
-                console.error("Cloud Save Error:", error);
-                showToast(`Sync Failed: ${error.message}`, true); 
+                if (!isSilent) showToast("Saved to Cloud");
+            } catch (e) { 
+                console.error("Save failed", e);
+                showToast("Push Failed: Check Rules", true); 
             }
         }
-
-        async function loadFromCloud() {
-            if (!user) { showToast("Connection inactive", true); return; }
-            showToast("Fetching Team Data...", false, true);
-            try {
-                const sharedDocRef = getSharedDocRef();
-                const snap = await getDoc(sharedDocRef);
-                if (snap.exists()) {
-                    const data = snap.data();
-                    wsFleets = data.wsFleets || [];
-                    decomWs = data.decomWs || [];
-                    apps = data.apps || [];
-                    yearlyLogs = data.yearlyLogs || [];
-                    refreshAll(true);
-                    showToast("Data Refreshed");
-                } else { showToast("No Team Data Found on Cloud", true); }
-            } catch (error) { 
-                showToast(`Fetch Error: ${error.message}`, true); 
-            }
-        }
-
-        // --- UI & DATA MANAGEMENT ---
 
         function refreshAll(skipSync = false) {
             renderWsFleets(); 
@@ -505,6 +494,7 @@
 
         function renderWsFleets() {
             const tbody = document.getElementById('ws-fleet-body');
+            if(!tbody) return;
             tbody.innerHTML = '';
             wsFleets.forEach(f => {
                 const b = BUNDLES[f.bundle];
@@ -517,7 +507,7 @@
                     <td class="px-6 py-4 text-center"><input type="number" value="${f.hours}" class="w-16 text-center" data-field="hours"></td>
                     <td class="px-6 py-4 text-center"><label class="switch"><input type="checkbox" ${f.isAlwaysOn ? 'checked' : ''} data-field="isAlwaysOn"><span class="slider"></span></label></td>
                     <td class="px-6 py-4 font-bold text-emerald-600 text-right">£${Math.round((f.isAlwaysOn ? b.m : (b.hb + f.hours * b.hr)) * f.users * 12).toLocaleString()}</td>
-                    <td class="px-6 py-4 text-right no-print"><button class="text-rose-400 hover:text-rose-600 font-bold" onclick="deleteWsFleet(${f.id})">×</button></td>
+                    <td class="px-6 py-4 text-right no-print"><button class="text-rose-400 font-bold" onclick="deleteWsFleet(${f.id})">×</button></td>
                 `;
                 row.querySelectorAll('input, select').forEach(el => el.addEventListener('change', e => {
                     const fleet = wsFleets.find(item => item.id === f.id);
@@ -531,6 +521,7 @@
 
         function renderYearlyLogs() {
             const tbody = document.getElementById('yearly-spend-body');
+            if(!tbody) return;
             tbody.innerHTML = '';
             [...yearlyLogs].sort((a,b) => b.year - a.year).forEach(log => {
                 const row = document.createElement('tr');
@@ -569,6 +560,7 @@
 
         function renderDecomWs() {
             const tbody = document.getElementById('decom-ws-body');
+            if(!tbody) return;
             tbody.innerHTML = '';
             decomWs.forEach(d => {
                 const b = BUNDLES[d.bundle];
@@ -580,6 +572,7 @@
 
         function renderAppList() {
             const tbody = document.getElementById('app-list-body');
+            if(!tbody) return;
             tbody.innerHTML = '';
             apps.forEach(a => {
                 const row = document.createElement('tr');
@@ -589,8 +582,7 @@
         }
 
         function saveToLocalStorage() {
-            const data = JSON.stringify({ wsFleets, decomWs, apps, yearlyLogs, timestamp: Date.now() });
-            localStorage.setItem(STORAGE_KEY, data);
+            localStorage.setItem(STORAGE_KEY, JSON.stringify({ wsFleets, decomWs, apps, yearlyLogs, timestamp: Date.now() }));
         }
 
         function loadFromLocalStorage() {
@@ -615,13 +607,6 @@
                 document.getElementById('auto-sync-toggle').checked = isAutoSyncEnabled;
                 updateSyncUI();
             }
-        }
-
-        function toggleAutoSync(e) {
-            isAutoSyncEnabled = e.target.checked;
-            localStorage.setItem(SETTINGS_KEY, JSON.stringify({ autoSync: isAutoSyncEnabled }));
-            updateSyncUI();
-            if (isAutoSyncEnabled) triggerAutoSync();
         }
 
         function updateSyncUI() {
@@ -656,9 +641,6 @@
             document.getElementById('page-' + id)?.classList.add('active');
         };
 
-        window.handleCloudSave = () => saveToCloud();
-        window.handleCloudLoad = () => loadFromCloud();
-        window.forceReauth = () => initApp();
         window.addWsFleet = () => { wsFleets.push({ id: Date.now(), name: 'New Fleet', bundle: 'standard', users: 5, hours: 40, isAlwaysOn: false }); refreshAll(); };
         window.deleteWsFleet = id => { wsFleets = wsFleets.filter(f => f.id !== id); refreshAll(); };
         window.addDecomWs = () => { decomWs.push({ id: Date.now(), name: 'Retired Asset', bundle: 'standard', users: 1, isAlwaysOn: true }); refreshAll(); };
@@ -667,10 +649,21 @@
         window.deleteApp = id => { apps = apps.filter(a => a.id !== id); refreshAll(); };
         window.addYearlyLog = () => { yearlyLogs.push({ id: Date.now(), year: new Date().getFullYear(), amount: 0, notes: '' }); refreshAll(); };
         window.deleteYearlyLog = id => { yearlyLogs = yearlyLogs.filter(l => l.id !== id); refreshAll(); };
-        window.toggleAutoSync = toggleAutoSync;
-        
-        window.addEventListener('DOMContentLoaded', initApp);
+
+        document.getElementById('auto-sync-toggle')?.addEventListener('change', (e) => {
+            isAutoSyncEnabled = e.target.checked;
+            localStorage.setItem(SETTINGS_KEY, JSON.stringify({ autoSync: isAutoSyncEnabled }));
+            updateSyncUI();
+            if (isAutoSyncEnabled) triggerAutoSync();
+        });
+        document.getElementById('btn-push')?.addEventListener('click', () => saveToCloud());
+        document.getElementById('btn-refresh')?.addEventListener('click', () => {
+             const ref = getSharedDocRef();
+             if(ref) setupSharedListener();
+        });
+        document.getElementById('btn-reauth')?.addEventListener('click', () => initApp());
+
+        initApp();
     </script>
 </body>
-
 </html>
