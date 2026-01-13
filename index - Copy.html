@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cloud Cost Optimizer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .glass-card {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(226, 232, 240, 1);
+        }
+        .nav-link.active {
+            background-color: rgba(16, 185, 129, 0.1);
+            color: #10b981;
+            border-right: 4px solid #10b981;
+        }
+        .page-content { display: none; }
+        .page-content.active { display: block; }
+        .app-row:hover .delete-btn { opacity: 1; }
+        input:focus { outline: none; border-bottom: 2px solid #3b82f6 !important; }
+        
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 34px;
+            height: 20px;
+        }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #cbd5e1;
+            transition: .4s;
+            border-radius: 20px;
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 14px; width: 14px;
+            left: 3px; bottom: 3px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        input:checked + .slider { background-color: #3b82f6; }
+        input:checked + .slider:before { transform: translateX(14px); }
+        
+        .type-switch input:checked + .slider { background-color: #10b981; } 
+        .type-switch input:not(:checked) + .slider { background-color: #f43f5e; } 
+
+        #status-toast {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            z-index: 1000;
+            transition: transform 0.3s ease-out, opacity 0.3s ease-out;
+            transform: translateY(100px);
+            opacity: 0;
+        }
+        #status-toast.show { transform: translateY(0); opacity: 1; }
+
+        @media print {
+            nav, .no-print { display: none !important; }
+            .page-content { display: block !important; }
+            body { background: white; }
+            .glass-card { border: none; shadow: none; }
+        }
+    </style>
+</head>
+<body class="bg-slate-50 min-h-screen font-sans text-slate-900 flex flex-col md:flex-row">
+
+    <!-- Status Toast -->
+    <div id="status-toast" class="bg-slate-900 text-white px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-3">
+        <div id="toast-spinner" class="animate-spin w-4 h-4 border-2 border-emerald-400 border-t-transparent rounded-full hidden"></div>
+        <span id="toast-message">Action successful</span>
+    </div>
+
+    <!-- Sidebar Navigation -->
+    <nav class="w-full md:w-64 bg-slate-900 text-slate-300 md:min-h-screen flex flex-col shadow-2xl z-50">
+        <div class="p-6 border-b border-slate-800">
+            <h1 class="text-xl font-bold text-emerald-400">Savings Hub</h1>
+            <p class="text-[10px] uppercase tracking-widest text-slate-500 mt-1">Cost Management</p>
+        </div>
+        <div class="flex-grow py-4 overflow-y-auto">
+            <button onclick="showPage('annual')" id="nav-annual" class="nav-link w-full text-left px-6 py-4 flex items-center gap-3 hover:bg-slate-800 transition-colors active">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+                Annual Spend
+            </button>
+            <button onclick="showPage('workspaces')" id="nav-workspaces" class="nav-link w-full text-left px-6 py-4 flex items-center gap-3 hover:bg-slate-800 transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+                AWS WorkSpaces
+            </button>
+            <button onclick="showPage('decommissioned')" id="nav-decommissioned" class="nav-link w-full text-left px-6 py-4 flex items-center gap-3 hover:bg-slate-800 transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1-1v3M4 7h16" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+                Decommissioned
+            </button>
+            <button onclick="showPage('nashtech')" id="nav-nashtech" class="nav-link w-full text-left px-6 py-4 flex items-center gap-3 hover:bg-slate-800 transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+                Software Apps
+            </button>
+            <button onclick="showPage('summary')" id="nav-summary" class="nav-link w-full text-left px-6 py-4 flex items-center gap-3 hover:bg-slate-800 transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+                Executive Summary
+            </button>
+            
+            <div class="mt-8 px-4 space-y-4">
+                <div>
+                    <div class="flex justify-between items-center px-2 mb-2">
+                        <p class="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Team Sync</p>
+                        <div class="flex items-center gap-2">
+                            <span class="text-[8px] text-slate-500 uppercase font-bold">Auto</span>
+                            <label class="switch scale-75">
+                                <input type="checkbox" id="auto-sync-toggle" onchange="toggleAutoSync(event)">
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="flex flex-col gap-1">
+                        <button onclick="handleCloudSave()" id="btn-push" class="w-full flex items-center justify-center gap-2 py-2 px-4 rounded-xl border border-emerald-500/50 hover:bg-emerald-950/20 text-emerald-400 text-xs font-bold transition-all">
+                            Push to Team
+                        </button>
+                        <button onclick="handleCloudLoad()" id="btn-refresh" class="w-full flex items-center justify-center gap-2 py-2 px-4 rounded-xl border border-slate-700 hover:bg-slate-800 text-xs text-slate-400 font-bold transition-all">
+                            Refresh Data
+                        </button>
+                        <button onclick="forceReauth()" class="text-[9px] text-slate-600 hover:text-slate-400 mt-1 uppercase font-bold text-center">
+                            Reset Connection
+                        </button>
+                    </div>
+                </div>
+
+                <div>
+                    <p class="text-[9px] font-bold text-slate-500 uppercase tracking-widest px-2 mb-2">Local Actions</p>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button onclick="exportCSV()" class="flex items-center justify-center py-2 px-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-[10px] font-bold transition-all">CSV</button>
+                        <button onclick="exportJSON()" class="flex items-center justify-center py-2 px-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-[10px] font-bold transition-all">JSON</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="p-6 bg-slate-950/50">
+            <p id="nav-cost-total" class="text-emerald-400 font-bold text-sm tracking-tight">£0 Active Spend</p>
+            <p id="auth-status" class="text-[9px] text-slate-500 mt-1 uppercase font-bold">Checking Connection...</p>
+        </div>
+    </nav>
+
+    <!-- Main Content Area -->
+    <div class="flex-grow flex flex-col h-screen overflow-y-auto" id="main-content">
+        
+        <!-- Annual Spend Page -->
+        <div id="page-annual" class="page-content active p-4 md:p-8">
+            <header class="mb-8 flex justify-between items-end no-print">
+                <div>
+                    <h2 class="text-3xl font-bold text-slate-800">Annual Spend Tracking</h2>
+                    <p class="text-slate-500 mt-2 text-sm">Log actual yearly AWS WorkSpaces invoice totals.</p>
+                </div>
+                <button onclick="addYearlyLog()" class="bg-slate-800 hover:bg-slate-950 text-white px-6 py-2 rounded-xl font-bold text-sm shadow-lg">
+                    Log New Year
+                </button>
+            </header>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <div class="lg:col-span-2">
+                    <div class="glass-card rounded-3xl overflow-hidden shadow-sm">
+                        <table class="w-full text-left border-collapse">
+                            <thead class="bg-slate-50 border-b border-slate-100">
+                                <tr>
+                                    <th class="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Year</th>
+                                    <th class="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Reference / Notes</th>
+                                    <th class="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-right">Actual Annual Spend</th>
+                                    <th class="px-6 py-4 no-print"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="yearly-spend-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="space-y-6">
+                    <div class="glass-card p-8 rounded-3xl bg-white border-l-4 border-emerald-500 shadow-lg">
+                        <h4 class="text-xs font-bold text-slate-400 uppercase mb-4">Spend Comparison</h4>
+                        <div class="space-y-4">
+                            <div>
+                                <p class="text-[10px] text-slate-400 uppercase font-bold">Projected (Fleet Tab)</p>
+                                <p id="comparison-projected" class="text-2xl font-black text-slate-800">£0</p>
+                            </div>
+                            <div>
+                                <p class="text-[10px] text-slate-400 uppercase font-bold">Latest Actual Year</p>
+                                <p id="comparison-actual" class="text-2xl font-black text-blue-600">£0</p>
+                            </div>
+                            <div class="pt-4 border-t border-slate-100">
+                                <p class="text-[10px] text-slate-400 uppercase font-bold">Variance</p>
+                                <p id="comparison-variance" class="text-xl font-bold">£0</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- AWS WorkSpaces Page -->
+        <div id="page-workspaces" class="page-content p-4 md:p-8">
+            <header class="mb-8 flex justify-between items-end no-print">
+                <div>
+                    <h2 class="text-3xl font-bold text-slate-800">AWS WorkSpaces Fleets</h2>
+                </div>
+                <button onclick="addWsFleet()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2 rounded-xl font-bold text-sm shadow-lg">
+                    Add Fleet
+                </button>
+            </header>
+            <div class="glass-card rounded-3xl overflow-hidden shadow-sm mb-8">
+                <table class="w-full text-left border-collapse">
+                    <thead class="bg-slate-50 border-b border-slate-100">
+                        <tr>
+                            <th class="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Fleet Name</th>
+                            <th class="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Bundle</th>
+                            <th class="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-center">Users</th>
+                            <th class="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-center">Hours/Mo</th>
+                            <th class="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-center">Always On</th>
+                            <th class="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-right">Fleet Ann.</th>
+                            <th class="px-6 py-4 no-print"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="ws-fleet-body"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Decommissioned Assets Page -->
+        <div id="page-decommissioned" class="page-content p-4 md:p-8">
+            <header class="mb-8 flex justify-between items-end no-print">
+                <h2 class="text-3xl font-bold text-slate-800">Decommissioned Assets</h2>
+                <button onclick="addDecomWs()" class="bg-slate-700 hover:bg-slate-800 text-white px-6 py-2 rounded-xl font-bold text-sm">Add Asset</button>
+            </header>
+            <div class="glass-card rounded-3xl overflow-hidden shadow-sm">
+                <table class="w-full text-left border-collapse">
+                    <thead class="bg-slate-50 border-b border-slate-100">
+                        <tr>
+                            <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Asset</th>
+                            <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Bundle</th>
+                            <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-center">Users</th>
+                            <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-right">Ann. Saving</th>
+                            <th class="px-6 py-4 no-print"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="decom-ws-body"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Software Tracker Page -->
+        <div id="page-nashtech" class="page-content p-4 md:p-8">
+            <header class="mb-8 flex justify-between items-end no-print">
+                <h2 class="text-3xl font-bold text-slate-800">Software App Tracker</h2>
+                <button onclick="addNewApp()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-xl font-bold text-sm">Add App</button>
+            </header>
+            <div class="glass-card rounded-3xl overflow-hidden shadow-sm">
+                <table class="w-full text-left border-collapse">
+                    <thead class="bg-slate-50 border-b border-slate-100">
+                        <tr>
+                            <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Application</th>
+                            <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-center">Type</th>
+                            <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-right">Annual Total</th>
+                            <th class="px-6 py-4 no-print"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="app-list-body"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Summary Page -->
+        <div id="page-summary" class="page-content p-4 md:p-8">
+            <h2 class="text-3xl font-bold text-slate-800 mb-8">Executive Summary</h2>
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
+                <div class="glass-card p-6 rounded-3xl shadow-sm border-l-4 border-slate-800">
+                    <p class="text-[10px] font-bold text-slate-400 uppercase mb-2">Hist. Actual</p>
+                    <p id="sum-actual-spend" class="text-3xl font-black text-slate-900">£0</p>
+                </div>
+                <div class="glass-card p-6 rounded-3xl shadow-sm border-l-4 border-rose-500">
+                    <p class="text-[10px] font-bold text-slate-400 uppercase mb-2">Proj. Total</p>
+                    <p id="sum-liability" class="text-3xl font-black text-rose-600">£0</p>
+                </div>
+                <div class="glass-card p-6 rounded-3xl shadow-sm border-l-4 border-blue-500">
+                    <p class="text-[10px] font-bold text-slate-400 uppercase mb-2">Pending Opt.</p>
+                    <p id="sum-optimization" class="text-3xl font-black text-blue-600">£0</p>
+                </div>
+                <div class="glass-card p-6 rounded-3xl shadow-sm border-l-4 border-emerald-500">
+                    <p class="text-[10px] font-bold text-slate-400 uppercase mb-2">Realized Sav.</p>
+                    <p id="sum-savings" class="text-3xl font-black text-emerald-600">£0</p>
+                </div>
+            </div>
+            <div class="bg-slate-900 p-10 rounded-[2.5rem] text-white shadow-2xl relative overflow-hidden">
+                <p class="text-emerald-400 text-xs font-bold uppercase tracking-[0.2em] mb-4">Total Net Business Value</p>
+                <div class="flex items-baseline gap-4">
+                    <p id="sum-total-value" class="text-6xl font-black text-white">£0</p>
+                    <span class="text-emerald-500 font-bold text-sm">per annum</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js';
+        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js';
+        import { getFirestore, doc, setDoc, getDoc, onSnapshot } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
+
+        // Firebase environment variables
+        const firebaseConfig = JSON.parse(__firebase_config);
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'cost-optimizer-prod';
+        const initialToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+        const STORAGE_KEY = 'savings_hub_v3_data';
+        const SETTINGS_KEY = 'savings_hub_v3_settings';
+        
+        let db, auth, user;
+        let wsFleets = [], decomWs = [], apps = [], yearlyLogs = [];
+        let isAutoSyncEnabled = false;
+        let autoSyncTimeout = null;
+        let unsubscribeShared = null;
+
+        const BUNDLES = {
+            "value": { name: "Value", m: 26, hb: 8, hr: 0.22 },
+            "standard": { name: "Standard", m: 33, hb: 11, hr: 0.30 },
+            "perf": { name: "Performance", m: 45, hb: 13, hr: 0.42 },
+            "power": { name: "Power", m: 65, hb: 13, hr: 0.62 },
+            "powerpro": { name: "PowerPro", m: 110, hb: 16, hr: 1.15 }
+        };
+
+        // --- AUTH & INIT LOGIC ---
+
+        const initApp = async () => {
+            loadFromLocalStorage();
+            loadSettings();
+            
+            try {
+                const app = initializeApp(firebaseConfig);
+                auth = getAuth(app);
+                db = getFirestore(app);
+                
+                // Track Auth State
+                onAuthStateChanged(auth, (u) => {
+                    user = u;
+                    const statusEl = document.getElementById('auth-status');
+                    if (u) {
+                        statusEl.innerText = "Connected ✅";
+                        statusEl.className = "text-[9px] text-emerald-500 mt-1 uppercase font-bold";
+                        setupSharedListener();
+                    } else {
+                        statusEl.innerText = "Disconnected ⚪";
+                        statusEl.className = "text-[9px] text-slate-500 mt-1 uppercase font-bold";
+                    }
+                });
+
+                // RULE 3: Auth Before Queries - await sign-in explicitly
+                const statusEl = document.getElementById('auth-status');
+                statusEl.innerText = "Connecting...";
+                
+                if (initialToken) {
+                    await signInWithCustomToken(auth, initialToken);
+                } else {
+                    await signInAnonymously(auth);
+                }
+
+            } catch (e) {
+                console.error("Auth initialization failed", e);
+                const statusEl = document.getElementById('auth-status');
+                statusEl.innerText = "Connection Failed ❌";
+                statusEl.className = "text-[9px] text-rose-500 mt-1 uppercase font-bold";
+            }
+            
+            // Default data if empty
+            if (wsFleets.length === 0 && decomWs.length === 0 && apps.length === 0 && yearlyLogs.length === 0) {
+                wsFleets = [{ id: 1, name: 'Initial Fleet', bundle: 'standard', users: 10, hours: 160, isAlwaysOn: true }];
+                refreshAll(true);
+            }
+        };
+
+        // --- FIRESTORE LOGIC ---
+
+        function getSharedDocRef() {
+            // RULE 1: Strict Paths - Using artifacts/{appId}/public/data/shared_config (even segments: 6)
+            // segments: [1:artifacts, 2:appId, 3:public, 4:data, 5:configs, 6:shared]
+            return doc(db, 'artifacts', appId, 'public', 'data', 'configs', 'shared');
+        }
+
+        function setupSharedListener() {
+            if (unsubscribeShared) unsubscribeShared();
+            if (!user) return; // Guard
+            
+            const sharedDocRef = getSharedDocRef();
+            
+            // MANDATORY: Success and Error callbacks
+            unsubscribeShared = onSnapshot(sharedDocRef, (snap) => {
+                if (snap.exists()) {
+                    const data = snap.data();
+                    const incomingStr = JSON.stringify({ws: data.wsFleets, de: data.decomWs, ap: data.apps, lo: data.yearlyLogs});
+                    const currentStr = JSON.stringify({ws: wsFleets, de: decomWs, ap: apps, lo: yearlyLogs});
+                    
+                    if (incomingStr !== currentStr) {
+                        wsFleets = data.wsFleets || [];
+                        decomWs = data.decomWs || [];
+                        apps = data.apps || [];
+                        yearlyLogs = data.yearlyLogs || [];
+                        refreshAll(true);
+                    }
+                }
+            }, (err) => {
+                console.error("Firestore Listener Error:", err);
+                if (err.code === 'permission-denied') {
+                    showToast("Sync Access Denied. Check Permission Rules.", true);
+                }
+            });
+        }
+
+        async function saveToCloud(isSilent = false) {
+            if (!user) {
+                if (!isSilent) showToast("Connection inactive.", true);
+                return;
+            }
+            if (!isSilent) showToast("Syncing with Team...", false, true);
+            try {
+                const sharedDocRef = getSharedDocRef();
+                await setDoc(sharedDocRef, { 
+                    wsFleets, decomWs, apps, yearlyLogs, 
+                    updatedBy: user.uid, updatedAt: new Date().toISOString() 
+                });
+                if (!isSilent) showToast("Team Sync Success");
+            } catch (error) { 
+                console.error("Cloud Save Error:", error);
+                showToast(`Sync Failed: ${error.message}`, true); 
+            }
+        }
+
+        async function loadFromCloud() {
+            if (!user) { showToast("Connection inactive", true); return; }
+            showToast("Fetching Team Data...", false, true);
+            try {
+                const sharedDocRef = getSharedDocRef();
+                const snap = await getDoc(sharedDocRef);
+                if (snap.exists()) {
+                    const data = snap.data();
+                    wsFleets = data.wsFleets || [];
+                    decomWs = data.decomWs || [];
+                    apps = data.apps || [];
+                    yearlyLogs = data.yearlyLogs || [];
+                    refreshAll(true);
+                    showToast("Data Refreshed");
+                } else { showToast("No Team Data Found on Cloud", true); }
+            } catch (error) { 
+                showToast(`Fetch Error: ${error.message}`, true); 
+            }
+        }
+
+        // --- UI & DATA MANAGEMENT ---
+
+        function refreshAll(skipSync = false) {
+            renderWsFleets(); 
+            renderDecomWs(); 
+            renderAppList();
+            renderYearlyLogs();
+            updateCalculationsAndUI();
+            saveToLocalStorage();
+            if (!skipSync && isAutoSyncEnabled) triggerAutoSync();
+        }
+
+        function updateCalculationsAndUI() {
+            let wsTotal = 0, wsOpt = 0;
+            wsFleets.forEach(f => {
+                const b = BUNDLES[f.bundle];
+                const autoStopMonthly = b.hb + (f.hours * b.hr);
+                const currMonthly = f.isAlwaysOn ? b.m : autoStopMonthly;
+                const bestMonthly = Math.min(autoStopMonthly, b.m);
+                wsTotal += (currMonthly * f.users * 12);
+                wsOpt += Math.max(0, (currMonthly - bestMonthly) * f.users * 12);
+            });
+
+            let appsLiability = 0, appsSavings = 0;
+            apps.forEach(a => {
+                const total = a.price * a.users * 12;
+                if (a.isSaving) appsSavings += total; else appsLiability += total;
+            });
+
+            let decomTotal = 0;
+            decomWs.forEach(d => {
+                const b = BUNDLES[d.bundle];
+                decomTotal += (b.m * d.users * 12);
+            });
+
+            const sortedLogs = [...yearlyLogs].sort((a,b) => b.year - a.year);
+            const latestActual = sortedLogs[0]?.amount || 0;
+            const overallLiability = wsTotal + appsLiability;
+            const realizedSavings = decomTotal + appsSavings;
+            const totalNetValue = realizedSavings + wsOpt;
+
+            document.getElementById('sum-actual-spend').innerText = `£${Math.round(latestActual).toLocaleString()}`;
+            document.getElementById('sum-liability').innerText = `£${Math.round(overallLiability).toLocaleString()}`;
+            document.getElementById('sum-optimization').innerText = `£${Math.round(wsOpt).toLocaleString()}`;
+            document.getElementById('sum-savings').innerText = `£${Math.round(realizedSavings).toLocaleString()}`;
+            document.getElementById('sum-total-value').innerText = `£${Math.round(totalNetValue).toLocaleString()}`;
+            document.getElementById('nav-cost-total').innerText = `£${Math.round(overallLiability).toLocaleString()} Active Spend`;
+        }
+
+        function renderWsFleets() {
+            const tbody = document.getElementById('ws-fleet-body');
+            tbody.innerHTML = '';
+            wsFleets.forEach(f => {
+                const b = BUNDLES[f.bundle];
+                const row = document.createElement('tr');
+                row.className = 'app-row border-b border-slate-50 hover:bg-slate-50/50 group text-sm';
+                row.innerHTML = `
+                    <td class="px-6 py-4"><input type="text" value="${f.name}" class="bg-transparent w-full" data-field="name"></td>
+                    <td class="px-6 py-4"><select class="w-full text-xs" data-field="bundle">${Object.keys(BUNDLES).map(k => `<option value="${k}" ${f.bundle === k ? 'selected' : ''}>${BUNDLES[k].name}</option>`).join('')}</select></td>
+                    <td class="px-6 py-4 text-center"><input type="number" value="${f.users}" class="w-16 text-center" data-field="users"></td>
+                    <td class="px-6 py-4 text-center"><input type="number" value="${f.hours}" class="w-16 text-center" data-field="hours"></td>
+                    <td class="px-6 py-4 text-center"><label class="switch"><input type="checkbox" ${f.isAlwaysOn ? 'checked' : ''} data-field="isAlwaysOn"><span class="slider"></span></label></td>
+                    <td class="px-6 py-4 font-bold text-emerald-600 text-right">£${Math.round((f.isAlwaysOn ? b.m : (b.hb + f.hours * b.hr)) * f.users * 12).toLocaleString()}</td>
+                    <td class="px-6 py-4 text-right no-print"><button class="text-rose-400 hover:text-rose-600 font-bold" onclick="deleteWsFleet(${f.id})">×</button></td>
+                `;
+                row.querySelectorAll('input, select').forEach(el => el.addEventListener('change', e => {
+                    const fleet = wsFleets.find(item => item.id === f.id);
+                    const field = el.dataset.field;
+                    fleet[field] = (field === 'isAlwaysOn') ? e.target.checked : (field === 'name' || field === 'bundle' ? e.target.value : parseFloat(e.target.value) || 0);
+                    refreshAll();
+                }));
+                tbody.appendChild(row);
+            });
+        }
+
+        function renderYearlyLogs() {
+            const tbody = document.getElementById('yearly-spend-body');
+            tbody.innerHTML = '';
+            [...yearlyLogs].sort((a,b) => b.year - a.year).forEach(log => {
+                const row = document.createElement('tr');
+                row.className = 'app-row border-b border-slate-50 hover:bg-slate-50/50 group text-sm';
+                row.innerHTML = `
+                    <td class="px-6 py-4 font-bold"><input type="number" value="${log.year}" class="w-20" data-field="year"></td>
+                    <td class="px-6 py-4"><input type="text" value="${log.notes || ''}" class="w-full text-slate-500" data-field="notes"></td>
+                    <td class="px-6 py-4 text-right">£<input type="number" value="${log.amount}" class="w-32 text-right font-bold" data-field="amount"></td>
+                    <td class="px-6 py-4 text-right no-print"><button class="text-rose-400 font-bold" onclick="deleteYearlyLog(${log.id})">×</button></td>
+                `;
+                row.querySelectorAll('input').forEach(el => el.addEventListener('change', e => {
+                    const item = yearlyLogs.find(i => i.id === log.id);
+                    const field = el.dataset.field;
+                    item[field] = field === 'notes' ? e.target.value : parseFloat(e.target.value) || 0;
+                    refreshAll();
+                }));
+                tbody.appendChild(row);
+            });
+            updateComparisonUI();
+        }
+
+        function updateComparisonUI() {
+            let fleetAnnual = 0;
+            wsFleets.forEach(f => {
+                const b = BUNDLES[f.bundle];
+                fleetAnnual += (f.isAlwaysOn ? b.m : (b.hb + f.hours * b.hr)) * f.users * 12;
+            });
+            const latestLog = [...yearlyLogs].sort((a,b) => b.year - a.year)[0]?.amount || 0;
+            const variance = latestLog - fleetAnnual;
+            document.getElementById('comparison-projected').innerText = `£${Math.round(fleetAnnual).toLocaleString()}`;
+            document.getElementById('comparison-actual').innerText = `£${Math.round(latestLog).toLocaleString()}`;
+            const vEl = document.getElementById('comparison-variance');
+            vEl.innerText = `${variance >= 0 ? '+' : '-'}£${Math.abs(Math.round(variance)).toLocaleString()}`;
+            vEl.className = `text-xl font-bold ${variance > 0 ? 'text-rose-600' : 'text-emerald-600'}`;
+        }
+
+        function renderDecomWs() {
+            const tbody = document.getElementById('decom-ws-body');
+            tbody.innerHTML = '';
+            decomWs.forEach(d => {
+                const b = BUNDLES[d.bundle];
+                const row = document.createElement('tr');
+                row.innerHTML = `<td class="px-6 py-4">${d.name}</td><td class="px-6 py-4">${b.name}</td><td class="px-6 py-4 text-center">${d.users}</td><td class="px-6 py-4 text-right font-bold text-emerald-600">£${Math.round(b.m * d.users * 12).toLocaleString()}</td><td class="px-6 py-4 text-right"><button onclick="deleteDecom(${d.id})">×</button></td>`;
+                tbody.appendChild(row);
+            });
+        }
+
+        function renderAppList() {
+            const tbody = document.getElementById('app-list-body');
+            tbody.innerHTML = '';
+            apps.forEach(a => {
+                const row = document.createElement('tr');
+                row.innerHTML = `<td class="px-6 py-4">${a.name}</td><td class="px-6 py-4 text-center">${a.isSaving ? 'Saving' : 'Liability'}</td><td class="px-6 py-4 text-right font-bold">£${Math.round(a.price * a.users * 12).toLocaleString()}</td><td class="px-6 py-4 text-right"><button onclick="deleteApp(${a.id})">×</button></td>`;
+                tbody.appendChild(row);
+            });
+        }
+
+        function saveToLocalStorage() {
+            const data = JSON.stringify({ wsFleets, decomWs, apps, yearlyLogs, timestamp: Date.now() });
+            localStorage.setItem(STORAGE_KEY, data);
+        }
+
+        function loadFromLocalStorage() {
+            const saved = localStorage.getItem(STORAGE_KEY);
+            if (saved) {
+                try {
+                    const data = JSON.parse(saved);
+                    wsFleets = data.wsFleets || [];
+                    decomWs = data.decomWs || [];
+                    apps = data.apps || [];
+                    yearlyLogs = data.yearlyLogs || [];
+                    refreshAll(true);
+                } catch (e) {}
+            }
+        }
+
+        function loadSettings() {
+            const saved = localStorage.getItem(SETTINGS_KEY);
+            if (saved) {
+                const settings = JSON.parse(saved);
+                isAutoSyncEnabled = !!settings.autoSync;
+                document.getElementById('auto-sync-toggle').checked = isAutoSyncEnabled;
+                updateSyncUI();
+            }
+        }
+
+        function toggleAutoSync(e) {
+            isAutoSyncEnabled = e.target.checked;
+            localStorage.setItem(SETTINGS_KEY, JSON.stringify({ autoSync: isAutoSyncEnabled }));
+            updateSyncUI();
+            if (isAutoSyncEnabled) triggerAutoSync();
+        }
+
+        function updateSyncUI() {
+            const btn = document.getElementById('btn-push');
+            if (isAutoSyncEnabled) {
+                btn.classList.add('opacity-50', 'pointer-events-none');
+                btn.innerHTML = 'Live Sync Active';
+            } else {
+                btn.classList.remove('opacity-50', 'pointer-events-none');
+                btn.innerHTML = 'Push to Team';
+            }
+        }
+
+        function triggerAutoSync() {
+            if (!isAutoSyncEnabled || !user) return;
+            if (autoSyncTimeout) clearTimeout(autoSyncTimeout);
+            autoSyncTimeout = setTimeout(() => { saveToCloud(true); }, 2000); 
+        }
+
+        function showToast(msg, isError = false, showSpinner = false) {
+            const toast = document.getElementById('status-toast');
+            document.getElementById('toast-message').innerText = msg;
+            toast.className = `fixed bottom-8 right-8 text-white px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-3 transition-all duration-300 ${isError ? 'bg-rose-600' : 'bg-slate-900'} show`;
+            document.getElementById('toast-spinner').classList.toggle('hidden', !showSpinner);
+            if (!showSpinner) setTimeout(() => toast.classList.remove('show'), 4000);
+        }
+
+        window.showPage = id => {
+            document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+            document.getElementById('nav-' + id)?.classList.add('active');
+            document.querySelectorAll('.page-content').forEach(p => p.classList.remove('active'));
+            document.getElementById('page-' + id)?.classList.add('active');
+        };
+
+        window.handleCloudSave = () => saveToCloud();
+        window.handleCloudLoad = () => loadFromCloud();
+        window.forceReauth = () => initApp();
+        window.addWsFleet = () => { wsFleets.push({ id: Date.now(), name: 'New Fleet', bundle: 'standard', users: 5, hours: 40, isAlwaysOn: false }); refreshAll(); };
+        window.deleteWsFleet = id => { wsFleets = wsFleets.filter(f => f.id !== id); refreshAll(); };
+        window.addDecomWs = () => { decomWs.push({ id: Date.now(), name: 'Retired Asset', bundle: 'standard', users: 1, isAlwaysOn: true }); refreshAll(); };
+        window.deleteDecom = id => { decomWs = decomWs.filter(d => d.id !== id); refreshAll(); };
+        window.addNewApp = () => { apps.push({ id: Date.now(), name: 'New App', price: 100, users: 1, isSaving: false }); refreshAll(); };
+        window.deleteApp = id => { apps = apps.filter(a => a.id !== id); refreshAll(); };
+        window.addYearlyLog = () => { yearlyLogs.push({ id: Date.now(), year: new Date().getFullYear(), amount: 0, notes: '' }); refreshAll(); };
+        window.deleteYearlyLog = id => { yearlyLogs = yearlyLogs.filter(l => l.id !== id); refreshAll(); };
+        window.toggleAutoSync = toggleAutoSync;
+        
+        window.addEventListener('DOMContentLoaded', initApp);
+    </script>
+</body>
+</html>
