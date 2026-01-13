@@ -20,7 +20,6 @@
         .page-content { display: none; }
         .page-content.active { display: block; }
         .app-row:hover .delete-btn { opacity: 1; }
-        input:focus { outline: none; border-bottom: 2px solid #3b82f6 !important; }
         
         .switch {
             position: relative;
@@ -49,9 +48,6 @@
         input:checked + .slider { background-color: #3b82f6; }
         input:checked + .slider:before { transform: translateX(14px); }
         
-        .type-switch input:checked + .slider { background-color: #10b981; } 
-        .type-switch input:not(:checked) + .slider { background-color: #f43f5e; } 
-
         #status-toast {
             position: fixed;
             bottom: 2rem;
@@ -62,25 +58,17 @@
             opacity: 0;
         }
         #status-toast.show { transform: translateY(0); opacity: 1; }
-
-        @media print {
-            nav, .no-print { display: none !important; }
-            .page-content { display: block !important; }
-            body { background: white; }
-            .glass-card { border: none; shadow: none; }
-        }
     </style>
 </head>
 <body class="bg-slate-50 min-h-screen font-sans text-slate-900 flex flex-col md:flex-row">
 
     <!-- Status Toast -->
     <div id="status-toast" class="bg-slate-900 text-white px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-3">
-        <div id="toast-spinner" class="animate-spin w-4 h-4 border-2 border-emerald-400 border-t-transparent rounded-full hidden"></div>
         <span id="toast-message">Action successful</span>
     </div>
 
     <!-- Sidebar Navigation -->
-    <nav class="w-full md:w-64 bg-slate-900 text-slate-300 md:min-h-screen flex flex-col shadow-2xl z-50">
+    <nav class="w-full md:w-64 bg-slate-900 text-slate-300 md:min-h-screen flex flex-col shadow-2xl z-50 no-print">
         <div class="p-6 border-b border-slate-800">
             <h1 class="text-xl font-bold text-emerald-400">Savings Hub</h1>
             <p class="text-[10px] uppercase tracking-widest text-slate-500 mt-1">Cost Management</p>
@@ -108,7 +96,7 @@
             </button>
             
             <div class="mt-8 px-4 space-y-4">
-                <div>
+                <div class="no-print">
                     <div class="flex justify-between items-center px-2 mb-2">
                         <p class="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Team Sync</p>
                         <div class="flex items-center gap-2">
@@ -126,22 +114,15 @@
                         <button id="btn-refresh" class="w-full flex items-center justify-center gap-2 py-2 px-4 rounded-xl border border-slate-700 hover:bg-slate-800 text-xs text-slate-400 font-bold transition-all">
                             Refresh Data
                         </button>
-                        <button id="btn-reauth" class="text-[9px] text-slate-600 hover:text-slate-400 mt-1 uppercase font-bold text-center">
-                            Reset Connection
+                        <button onclick="exportToText()" class="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-xs text-white font-bold transition-all mt-2 shadow-lg shadow-emerald-900/20">
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                            Export Data (.txt)
                         </button>
-                    </div>
-                </div>
-
-                <div>
-                    <p class="text-[9px] font-bold text-slate-500 uppercase tracking-widest px-2 mb-2">Local Actions</p>
-                    <div class="grid grid-cols-2 gap-2">
-                        <button onclick="exportCSV()" class="flex items-center justify-center py-2 px-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-[10px] font-bold transition-all">CSV</button>
-                        <button onclick="exportJSON()" class="flex items-center justify-center py-2 px-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-[10px] font-bold transition-all">JSON</button>
                     </div>
                 </div>
             </div>
         </div>
-        <div class="p-6 bg-slate-950/50">
+        <div class="p-6 bg-slate-950/50 no-print">
             <p id="nav-cost-total" class="text-emerald-400 font-bold text-sm tracking-tight">£0 Active Spend</p>
             <p id="auth-status" class="text-[9px] text-slate-500 mt-1 uppercase font-bold">Checking Connection...</p>
         </div>
@@ -151,7 +132,7 @@
     <div class="flex-grow flex flex-col h-screen overflow-y-auto" id="main-content">
         <!-- Annual Spend Page -->
         <div id="page-annual" class="page-content active p-4 md:p-8">
-            <header class="mb-8 flex justify-between items-end no-print">
+            <header class="mb-8 flex justify-between items-end">
                 <div>
                     <h2 class="text-3xl font-bold text-slate-800">Annual Spend Tracking</h2>
                     <p class="text-slate-500 mt-2 text-sm">Log actual yearly AWS WorkSpaces invoice totals.</p>
@@ -201,41 +182,75 @@
 
         <!-- AWS WorkSpaces Page -->
         <div id="page-workspaces" class="page-content p-4 md:p-8">
-            <header class="mb-8 flex justify-between items-end no-print">
-                <h2 class="text-3xl font-bold text-slate-800">AWS WorkSpaces Fleets</h2>
+            <header class="mb-8 flex justify-between items-end">
+                <div>
+                    <h2 class="text-3xl font-bold text-slate-800">AWS WorkSpaces Fleets</h2>
+                    <p class="text-slate-500 mt-1 text-sm">Model your active infrastructure and optimization settings.</p>
+                </div>
                 <button onclick="addWsFleet()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2 rounded-xl font-bold text-sm shadow-lg">Add Fleet</button>
             </header>
-            <div class="glass-card rounded-3xl overflow-hidden shadow-sm mb-8">
-                <table class="w-full text-left border-collapse">
-                    <thead class="bg-slate-50 border-b border-slate-100">
-                        <tr>
-                            <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Fleet Name</th>
-                            <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Bundle</th>
-                            <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-center">Users</th>
-                            <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-center">Hours/Mo</th>
-                            <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-center">Always On</th>
-                            <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-right">Fleet Ann.</th>
-                            <th class="px-6 py-4 no-print"></th>
-                        </tr>
-                    </thead>
-                    <tbody id="ws-fleet-body"></tbody>
-                </table>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+                <div class="glass-card p-6 rounded-3xl shadow-sm border-l-4 border-slate-900">
+                    <p class="text-[10px] font-bold text-slate-400 uppercase mb-1">Total Fleet Users</p>
+                    <p id="ws-total-users" class="text-3xl font-black text-slate-900">0</p>
+                </div>
+                <div class="glass-card p-6 rounded-3xl shadow-sm border-l-4 border-emerald-500">
+                    <p class="text-[10px] font-bold text-slate-400 uppercase mb-1">Fleet Annual Cost</p>
+                    <p id="ws-total-annual" class="text-3xl font-black text-emerald-600">£0</p>
+                </div>
+                <div class="glass-card p-6 rounded-3xl shadow-sm border-l-4 border-blue-500 hidden lg:block">
+                    <p class="text-[10px] font-bold text-slate-400 uppercase mb-1">Optimization Potential</p>
+                    <p id="ws-total-opt" class="text-3xl font-black text-blue-600">£0</p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 xl:grid-cols-3 gap-8">
+                <div class="xl:col-span-2 space-y-8">
+                    <div class="glass-card rounded-3xl overflow-hidden shadow-sm">
+                        <table class="w-full text-left border-collapse">
+                            <thead class="bg-slate-50 border-b border-slate-100">
+                                <tr>
+                                    <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Fleet Name</th>
+                                    <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Bundle</th>
+                                    <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-center">Users</th>
+                                    <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-center">Hours/Mo</th>
+                                    <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-center">Always On</th>
+                                    <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-right">Fleet Ann.</th>
+                                    <th class="px-6 py-4 no-print"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="ws-fleet-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="space-y-6">
+                    <div class="glass-card p-8 rounded-3xl shadow-sm h-fit">
+                        <h4 class="text-xs font-bold text-slate-400 uppercase mb-6 text-center">Cost Model Efficiency</h4>
+                        <div class="relative h-64"><canvas id="efficiency-chart"></canvas></div>
+                    </div>
+                </div>
             </div>
         </div>
 
         <!-- Decommissioned Assets Page -->
         <div id="page-decommissioned" class="page-content p-4 md:p-8">
-            <header class="mb-8 flex justify-between items-end no-print">
-                <h2 class="text-3xl font-bold text-slate-800">Decommissioned Assets</h2>
-                <button onclick="addDecomWs()" class="bg-slate-700 hover:bg-slate-800 text-white px-6 py-2 rounded-xl font-bold text-sm">Add Asset</button>
+            <header class="mb-8 flex justify-between items-end">
+                <div>
+                    <h2 class="text-3xl font-bold text-slate-800">Decommissioned Assets</h2>
+                    <p class="text-slate-500 mt-1 text-sm">Track savings realized from retired infrastructure.</p>
+                </div>
+                <button onclick="addDecomWs()" class="bg-slate-700 hover:bg-slate-800 text-white px-6 py-2 rounded-xl font-bold text-sm shadow-lg">Add Retired Asset</button>
             </header>
             <div class="glass-card rounded-3xl overflow-hidden shadow-sm">
                 <table class="w-full text-left border-collapse">
                     <thead class="bg-slate-50 border-b border-slate-100">
                         <tr>
-                            <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Asset</th>
+                            <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Asset / Project</th>
                             <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Bundle</th>
                             <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-center">Users</th>
+                            <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-center">Hours/Mo</th>
+                            <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-center">Always On</th>
                             <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-right">Ann. Saving</th>
                             <th class="px-6 py-4 no-print"></th>
                         </tr>
@@ -247,7 +262,7 @@
 
         <!-- Software Tracker Page -->
         <div id="page-nashtech" class="page-content p-4 md:p-8">
-            <header class="mb-8 flex justify-between items-end no-print">
+            <header class="mb-8 flex justify-between items-end">
                 <h2 class="text-3xl font-bold text-slate-800">Software App Tracker</h2>
                 <button onclick="addNewApp()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-xl font-bold text-sm">Add App</button>
             </header>
@@ -268,30 +283,45 @@
 
         <!-- Summary Page -->
         <div id="page-summary" class="page-content p-4 md:p-8">
-            <h2 class="text-3xl font-bold text-slate-800 mb-8">Executive Summary</h2>
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
-                <div class="glass-card p-6 rounded-3xl shadow-sm border-l-4 border-slate-800">
-                    <p class="text-[10px] font-bold text-slate-400 uppercase mb-2">Hist. Actual</p>
-                    <p id="sum-actual-spend" class="text-3xl font-black text-slate-900">£0</p>
+            <header class="mb-10 flex justify-between items-start">
+                <div>
+                    <h2 class="text-4xl font-black text-slate-900 tracking-tight">Executive Summary</h2>
+                    <p class="text-slate-500 mt-2 font-medium">Consolidated Financial Overview & Business Value Tracking</p>
                 </div>
-                <div class="glass-card p-6 rounded-3xl shadow-sm border-l-4 border-rose-500">
-                    <p class="text-[10px] font-bold text-slate-400 uppercase mb-2">Proj. Total</p>
-                    <p id="sum-liability" class="text-3xl font-black text-rose-600">£0</p>
+            </header>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+                <div class="glass-card p-10 rounded-[2.5rem] border-l-8 border-slate-800 shadow-xl relative overflow-hidden">
+                    <p class="text-slate-400 text-xs font-bold uppercase tracking-widest mb-2">Historical Actual Spend</p>
+                    <p id="sum-actual-spend" class="text-5xl font-black text-slate-900">£0</p>
                 </div>
-                <div class="glass-card p-6 rounded-3xl shadow-sm border-l-4 border-blue-500">
-                    <p class="text-[10px] font-bold text-slate-400 uppercase mb-2">Pending Opt.</p>
-                    <p id="sum-optimization" class="text-3xl font-black text-blue-600">£0</p>
-                </div>
-                <div class="glass-card p-6 rounded-3xl shadow-sm border-l-4 border-emerald-500">
-                    <p class="text-[10px] font-bold text-slate-400 uppercase mb-2">Realized Sav.</p>
-                    <p id="sum-savings" class="text-3xl font-black text-emerald-600">£0</p>
+                <div class="glass-card p-10 rounded-[2.5rem] border-l-8 border-rose-500 shadow-xl bg-rose-50/20">
+                    <p class="text-rose-500 text-xs font-bold uppercase tracking-widest mb-2">Projected Annual Liability</p>
+                    <p id="sum-liability" class="text-5xl font-black text-slate-900">£0</p>
                 </div>
             </div>
-            <div class="bg-slate-900 p-10 rounded-[2.5rem] text-white shadow-2xl relative overflow-hidden">
-                <p class="text-emerald-400 text-xs font-bold uppercase tracking-[0.2em] mb-4">Total Net Business Value</p>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+                <div class="glass-card p-6 rounded-3xl shadow-md border-t-4 border-slate-400">
+                    <p class="text-[10px] text-slate-400 font-bold uppercase mb-2">WorkSpace Fleets</p>
+                    <p id="sum-breakdown-ws" class="text-2xl font-black text-slate-800">£0</p>
+                    <p id="sum-breakdown-ws-opt" class="text-[11px] text-emerald-600 font-bold mt-1">£0 Optimization Opportunity</p>
+                </div>
+                <div class="glass-card p-6 rounded-3xl shadow-md border-t-4 border-blue-400">
+                    <p class="text-[10px] text-slate-400 font-bold uppercase mb-2">Decommissioned Assets</p>
+                    <p id="sum-breakdown-decom" class="text-2xl font-black text-slate-800">£0</p>
+                </div>
+                <div class="glass-card p-6 rounded-3xl shadow-md border-t-4 border-indigo-400">
+                    <p class="text-[10px] text-slate-400 font-bold uppercase mb-2">Software (Net Impact)</p>
+                    <p id="sum-breakdown-sw" class="text-2xl font-black text-slate-800">£0</p>
+                </div>
+            </div>
+
+            <div class="bg-slate-900 p-12 rounded-[3rem] text-white shadow-2xl relative overflow-hidden">
+                <p class="text-emerald-400 text-sm font-black uppercase tracking-[0.3em] mb-4">Total Realized Value + Savings</p>
                 <div class="flex items-baseline gap-4">
-                    <p id="sum-total-value" class="text-6xl font-black text-white">£0</p>
-                    <span class="text-emerald-500 font-bold text-sm">per annum</span>
+                    <p id="sum-total-value" class="text-7xl font-black text-white">£0</p>
+                    <span class="text-emerald-500 font-bold text-lg">per annum</span>
                 </div>
             </div>
         </div>
@@ -299,46 +329,21 @@
 
     <script type="module">
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js';
-        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js';
-        import { getFirestore, doc, setDoc, getDoc, onSnapshot } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
+        import { getAuth, signInAnonymously, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js';
+        import { getFirestore, doc, setDoc, onSnapshot } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
 
-        /**
-         * 1. PERSONAL FIREBASE CONFIG
-         */
-        const personalFirebaseConfig = {
+        const firebaseConfig = {
             apiKey: "AIzaSyBt8khl7RpfjyIecK736ELgdXGg4Rqe2UU",
             authDomain: "cost-saving-d103f.firebaseapp.com",
             projectId: "cost-saving-d103f",
-            storageBucket: "cost-saving-d103f.firebasestorage.app",
-            messagingSenderId: "308687557118",
-            appId: "1:308687557118:web:62636951bb6a93b822b0af",
-            measurementId: "G-D596J4RRSL"
+            appId: "1:308687557118:web:62636951bb6a93b822b0af"
         };
 
-        // Determine which config to use
-        let firebaseConfig = null;
-        let isUsingPersonalConfig = false;
-
-        if (personalFirebaseConfig.apiKey && personalFirebaseConfig.apiKey !== "") {
-            firebaseConfig = personalFirebaseConfig;
-            isUsingPersonalConfig = true;
-        } else {
-            try {
-                firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
-            } catch (e) { }
-        }
-
-        const appId = isUsingPersonalConfig ? personalFirebaseConfig.projectId : (typeof __app_id !== 'undefined' ? __app_id : 'cost-optimizer-fallback');
-        const initialToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-
+        const appId = "cost-saving-d103f";
         const STORAGE_KEY = 'savings_hub_v3_data';
-        const SETTINGS_KEY = 'savings_hub_v3_settings';
         
-        let db, auth, user;
+        let db, auth, user, efficiencyChart;
         let wsFleets = [], decomWs = [], apps = [], yearlyLogs = [];
-        let isAutoSyncEnabled = false;
-        let autoSyncTimeout = null;
-        let unsubscribeShared = null;
 
         const BUNDLES = {
             "value": { name: "Value", m: 26, hb: 8, hr: 0.22 },
@@ -348,68 +353,83 @@
             "powerpro": { name: "PowerPro", m: 110, hb: 16, hr: 1.15 }
         };
 
-        const initApp = async () => {
-            loadFromLocalStorage();
-            loadSettings();
-            
-            if (firebaseConfig && firebaseConfig.apiKey) {
-                try {
-                    const app = initializeApp(firebaseConfig);
-                    auth = getAuth(app);
-                    db = getFirestore(app);
-                    
-                    onAuthStateChanged(auth, (u) => {
-                        user = u;
-                        const statusEl = document.getElementById('auth-status');
-                        if (u) {
-                            statusEl.innerText = "Connected ✅";
-                            statusEl.className = "text-[9px] text-emerald-500 mt-1 uppercase font-bold";
-                            setupSharedListener();
-                        } else {
-                            statusEl.innerText = "Disconnected ⚪";
-                            statusEl.className = "text-[9px] text-slate-500 mt-1 uppercase font-bold";
-                        }
-                    });
+        // EXPORT AS TEXT FUNCTION
+        window.exportToText = () => {
+            const dateStr = new Date().toLocaleDateString();
+            const latestActual = [...yearlyLogs].sort((a,b) => b.year - a.year)[0]?.amount || 0;
+            const liability = document.getElementById('sum-liability')?.innerText || "£0";
+            const totalValue = document.getElementById('sum-total-value')?.innerText || "£0";
 
-                    if (initialToken && !isUsingPersonalConfig) {
-                        await signInWithCustomToken(auth, initialToken);
-                    } else {
-                        await signInAnonymously(auth);
-                    }
-                } catch (e) {
-                    console.error("Firebase Auth failed", e);
-                    updateAuthStatusUI("Connection Error ❌", "text-rose-500");
-                }
-            } else {
-                updateAuthStatusUI("Offline Mode (Local Only)", "text-slate-400");
-            }
+            let content = `CLOUD COST OPTIMIZATION REPORT - ${dateStr}\n`;
+            content += `==========================================\n\n`;
             
-            if (wsFleets.length === 0 && decomWs.length === 0 && apps.length === 0 && yearlyLogs.length === 0) {
-                wsFleets = [{ id: 1, name: 'Sample Fleet', bundle: 'standard', users: 10, hours: 160, isAlwaysOn: true }];
-                refreshAll(true);
+            content += `EXECUTIVE SUMMARY\n`;
+            content += `-----------------\n`;
+            content += `Latest Actual Spend:  £${latestActual.toLocaleString()}\n`;
+            content += `Projected Liability:  ${liability}\n`;
+            content += `Total Realized Value: ${totalValue}\n\n`;
+
+            content += `ACTIVE WORKSPACE FLEETS\n`;
+            content += `-----------------------\n`;
+            wsFleets.forEach(f => {
+                const b = BUNDLES[f.bundle];
+                const cost = (f.isAlwaysOn ? b.m : (b.hb + f.hours * b.hr)) * f.users * 12;
+                content += `- ${f.name}: ${f.users} users (${b.name} bundle) | Mode: ${f.isAlwaysOn ? 'Always-On' : 'Auto-Stop'} | Ann: £${Math.round(cost).toLocaleString()}\n`;
+            });
+            content += `\n`;
+
+            if (decomWs.length > 0) {
+                content += `DECOMMISSIONED ASSETS (RETIRED)\n`;
+                content += `-------------------------------\n`;
+                decomWs.forEach(d => {
+                    const b = BUNDLES[d.bundle];
+                    const savings = (d.isAlwaysOn ? b.m : (b.hb + d.hours * b.hr)) * d.users * 12;
+                    content += `- ${d.name}: £${Math.round(savings).toLocaleString()} realized annual saving\n`;
+                });
+                content += `\n`;
             }
+
+            if (apps.length > 0) {
+                content += `SOFTWARE TRACKER\n`;
+                content += `----------------\n`;
+                apps.forEach(a => {
+                    content += `- ${a.name}: £${(a.price * a.users * 12).toLocaleString()} per annum (${a.isSaving ? 'SAVING' : 'LIABILITY'})\n`;
+                });
+            }
+
+            const blob = new Blob([content], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Cloud_Optimization_Report_${new Date().toISOString().slice(0,10)}.txt`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            showToast("Report Exported as .txt");
         };
 
-        function updateAuthStatusUI(text, colorClass) {
-            const statusEl = document.getElementById('auth-status');
-            if (statusEl) {
-                statusEl.innerText = text;
-                statusEl.className = `text-[9px] ${colorClass} mt-1 uppercase font-bold`;
-            }
-        }
-
-        function getSharedDocRef() {
-            if (!db) return null;
-            // Matches strict rule structure: /artifacts/{appId}/public/data/configs/shared
-            return doc(db, 'artifacts', appId, 'public', 'data', 'configs', 'shared');
-        }
+        const initApp = async () => {
+            loadFromLocalStorage();
+            try {
+                const app = initializeApp(firebaseConfig);
+                auth = getAuth(app);
+                db = getFirestore(app);
+                onAuthStateChanged(auth, (u) => {
+                    user = u;
+                    const statusEl = document.getElementById('auth-status');
+                    if (u) {
+                        if (statusEl) statusEl.innerText = "Connected ✅";
+                        setupSharedListener();
+                    }
+                });
+                await signInAnonymously(auth);
+            } catch (e) { console.error(e); }
+        };
 
         function setupSharedListener() {
-            if (unsubscribeShared) unsubscribeShared();
-            const ref = getSharedDocRef();
-            if (!user || !ref) return;
-            
-            unsubscribeShared = onSnapshot(ref, (snap) => {
+            const ref = doc(db, 'artifacts', appId, 'public', 'data', 'configs', 'shared');
+            onSnapshot(ref, (snap) => {
                 if (snap.exists()) {
                     const data = snap.data();
                     wsFleets = data.wsFleets || wsFleets;
@@ -418,45 +438,27 @@
                     yearlyLogs = data.yearlyLogs || yearlyLogs;
                     refreshAll(true);
                 }
-            }, (err) => {
-                console.error("Listener Error:", err);
-                if (err.code === 'permission-denied') {
-                    showToast("Database Permission Denied", true);
-                }
             });
         }
 
         async function saveToCloud(isSilent = false) {
-            if (!user || !db) {
-                if (!isSilent) showToast("Cloud storage unavailable.", true);
-                return;
-            }
-            if (!isSilent) showToast("Pushing to Database...", false, true);
+            if (!user) return;
+            const ref = doc(db, 'artifacts', appId, 'public', 'data', 'configs', 'shared');
             try {
-                const ref = getSharedDocRef();
-                await setDoc(ref, { 
-                    wsFleets, decomWs, apps, yearlyLogs, 
-                    updatedBy: user.uid, updatedAt: new Date().toISOString() 
-                });
-                if (!isSilent) showToast("Saved to Cloud");
-            } catch (e) { 
-                console.error("Save failed", e);
-                showToast("Push Failed: Check Rules", true); 
-            }
+                await setDoc(ref, { wsFleets, decomWs, apps, yearlyLogs, updatedAt: new Date().toISOString() });
+                if (!isSilent) showToast("Cloud Sync Complete");
+            } catch (e) { showToast("Sync Failed", true); }
         }
 
         function refreshAll(skipSync = false) {
-            renderWsFleets(); 
-            renderDecomWs(); 
-            renderAppList();
-            renderYearlyLogs();
+            renderWsFleets(); renderDecomWs(); renderAppList(); renderYearlyLogs();
             updateCalculationsAndUI();
             saveToLocalStorage();
-            if (!skipSync && isAutoSyncEnabled) triggerAutoSync();
+            if (!skipSync && document.getElementById('auto-sync-toggle')?.checked) saveToCloud(true);
         }
 
         function updateCalculationsAndUI() {
-            let wsTotal = 0, wsOpt = 0;
+            let wsTotal = 0, wsOpt = 0, wsUsers = 0;
             wsFleets.forEach(f => {
                 const b = BUNDLES[f.bundle];
                 const autoStopMonthly = b.hb + (f.hours * b.hr);
@@ -464,6 +466,14 @@
                 const bestMonthly = Math.min(autoStopMonthly, b.m);
                 wsTotal += (currMonthly * f.users * 12);
                 wsOpt += Math.max(0, (currMonthly - bestMonthly) * f.users * 12);
+                wsUsers += f.users;
+            });
+
+            let decomTotal = 0;
+            decomWs.forEach(d => {
+                const b = BUNDLES[d.bundle];
+                const monthly = d.isAlwaysOn ? b.m : (b.hb + d.hours * b.hr);
+                decomTotal += (monthly * d.users * 12);
             });
 
             let appsLiability = 0, appsSavings = 0;
@@ -472,34 +482,41 @@
                 if (a.isSaving) appsSavings += total; else appsLiability += total;
             });
 
-            let decomTotal = 0;
-            decomWs.forEach(d => {
-                const b = BUNDLES[d.bundle];
-                decomTotal += (b.m * d.users * 12);
-            });
-
-            const sortedLogs = [...yearlyLogs].sort((a,b) => b.year - a.year);
-            const latestActual = sortedLogs[0]?.amount || 0;
-            const overallLiability = wsTotal + appsLiability;
+            const latestActual = [...yearlyLogs].sort((a,b) => b.year - a.year)[0]?.amount || 0;
             const realizedSavings = decomTotal + appsSavings;
-            const totalNetValue = realizedSavings + wsOpt;
 
-            document.getElementById('sum-actual-spend').innerText = `£${Math.round(latestActual).toLocaleString()}`;
-            document.getElementById('sum-liability').innerText = `£${Math.round(overallLiability).toLocaleString()}`;
-            document.getElementById('sum-optimization').innerText = `£${Math.round(wsOpt).toLocaleString()}`;
-            document.getElementById('sum-savings').innerText = `£${Math.round(realizedSavings).toLocaleString()}`;
-            document.getElementById('sum-total-value').innerText = `£${Math.round(totalNetValue).toLocaleString()}`;
-            document.getElementById('nav-cost-total').innerText = `£${Math.round(overallLiability).toLocaleString()} Active Spend`;
+            setInnerText('sum-actual-spend', `£${Math.round(latestActual).toLocaleString()}`);
+            setInnerText('sum-liability', `£${Math.round(wsTotal + appsLiability).toLocaleString()}`);
+            setInnerText('sum-total-value', `£${Math.round(realizedSavings + wsOpt).toLocaleString()}`);
+            setInnerText('sum-breakdown-ws', `£${Math.round(wsTotal).toLocaleString()}`);
+            setInnerText('sum-breakdown-ws-opt', `£${Math.round(wsOpt).toLocaleString()} Optimization Opportunity`);
+            setInnerText('sum-breakdown-decom', `£${Math.round(decomTotal).toLocaleString()}`);
+            setInnerText('sum-breakdown-sw', `£${Math.round(appsLiability - appsSavings).toLocaleString()}`);
+            setInnerText('ws-total-users', wsUsers.toLocaleString());
+            setInnerText('ws-total-annual', `£${Math.round(wsTotal).toLocaleString()}`);
+            setInnerText('ws-total-opt', `£${Math.round(wsOpt).toLocaleString()}`);
+            setInnerText('nav-cost-total', `£${Math.round(wsTotal + appsLiability).toLocaleString()} Active Spend`);
+            setInnerText('comparison-projected', `£${Math.round(wsTotal).toLocaleString()}`);
+            setInnerText('comparison-actual', `£${Math.round(latestActual).toLocaleString()}`);
+            
+            const variance = latestActual - wsTotal;
+            const varEl = document.getElementById('comparison-variance');
+            if (varEl) {
+                varEl.innerText = `${variance >= 0 ? '+' : ''}£${Math.round(variance).toLocaleString()}`;
+                varEl.className = `text-xl font-bold ${variance > 0 ? 'text-rose-500' : 'text-emerald-500'}`;
+            }
+            renderChart(wsTotal, wsOpt);
         }
+
+        function setInnerText(id, text) { const el = document.getElementById(id); if(el) el.innerText = text; }
 
         function renderWsFleets() {
             const tbody = document.getElementById('ws-fleet-body');
-            if(!tbody) return;
-            tbody.innerHTML = '';
+            if(!tbody) return; tbody.innerHTML = '';
             wsFleets.forEach(f => {
                 const b = BUNDLES[f.bundle];
                 const row = document.createElement('tr');
-                row.className = 'app-row border-b border-slate-50 hover:bg-slate-50/50 group text-sm';
+                row.className = 'app-row border-b border-slate-50 hover:bg-slate-50/50 text-sm';
                 row.innerHTML = `
                     <td class="px-6 py-4"><input type="text" value="${f.name}" class="bg-transparent w-full" data-field="name"></td>
                     <td class="px-6 py-4"><select class="w-full text-xs" data-field="bundle">${Object.keys(BUNDLES).map(k => `<option value="${k}" ${f.bundle === k ? 'selected' : ''}>${BUNDLES[k].name}</option>`).join('')}</select></td>
@@ -510,9 +527,35 @@
                     <td class="px-6 py-4 text-right no-print"><button class="text-rose-400 font-bold" onclick="deleteWsFleet(${f.id})">×</button></td>
                 `;
                 row.querySelectorAll('input, select').forEach(el => el.addEventListener('change', e => {
-                    const fleet = wsFleets.find(item => item.id === f.id);
+                    const item = wsFleets.find(i => i.id === f.id);
                     const field = el.dataset.field;
-                    fleet[field] = (field === 'isAlwaysOn') ? e.target.checked : (field === 'name' || field === 'bundle' ? e.target.value : parseFloat(e.target.value) || 0);
+                    item[field] = (field === 'isAlwaysOn') ? e.target.checked : (field === 'name' || field === 'bundle' ? e.target.value : parseFloat(e.target.value) || 0);
+                    refreshAll();
+                }));
+                tbody.appendChild(row);
+            });
+        }
+
+        function renderDecomWs() {
+            const tbody = document.getElementById('decom-ws-body');
+            if(!tbody) return; tbody.innerHTML = '';
+            decomWs.forEach(d => {
+                const b = BUNDLES[d.bundle];
+                const row = document.createElement('tr');
+                row.className = 'app-row border-b border-slate-50 hover:bg-slate-50/50 text-sm';
+                row.innerHTML = `
+                    <td class="px-6 py-4"><input type="text" value="${d.name}" class="bg-transparent w-full" data-field="name"></td>
+                    <td class="px-6 py-4 text-center"><select data-field="bundle">${Object.keys(BUNDLES).map(k => `<option value="${k}" ${d.bundle === k ? 'selected' : ''}>${BUNDLES[k].name}</option>`).join('')}</select></td>
+                    <td class="px-6 py-4 text-center"><input type="number" value="${d.users}" class="w-16 text-center" data-field="users"></td>
+                    <td class="px-6 py-4 text-center"><input type="number" value="${d.hours}" class="w-16 text-center" data-field="hours"></td>
+                    <td class="px-6 py-4 text-center"><label class="switch"><input type="checkbox" ${d.isAlwaysOn ? 'checked' : ''} data-field="isAlwaysOn"><span class="slider"></span></label></td>
+                    <td class="px-6 py-4 font-bold text-emerald-600 text-right">£${Math.round((d.isAlwaysOn ? b.m : (b.hb + d.hours * b.hr)) * d.users * 12).toLocaleString()}</td>
+                    <td class="px-6 py-4 text-right no-print"><button class="text-rose-400 font-bold" onclick="deleteDecom(${d.id})">×</button></td>
+                `;
+                row.querySelectorAll('input, select').forEach(el => el.addEventListener('change', e => {
+                    const item = decomWs.find(i => i.id === d.id);
+                    const field = el.dataset.field;
+                    item[field] = (field === 'isAlwaysOn') ? e.target.checked : (field === 'name' || field === 'bundle' ? e.target.value : parseFloat(e.target.value) || 0);
                     refreshAll();
                 }));
                 tbody.appendChild(row);
@@ -521,13 +564,12 @@
 
         function renderYearlyLogs() {
             const tbody = document.getElementById('yearly-spend-body');
-            if(!tbody) return;
-            tbody.innerHTML = '';
+            if(!tbody) return; tbody.innerHTML = '';
             [...yearlyLogs].sort((a,b) => b.year - a.year).forEach(log => {
                 const row = document.createElement('tr');
-                row.className = 'app-row border-b border-slate-50 hover:bg-slate-50/50 group text-sm';
+                row.className = 'border-b border-slate-50 text-sm';
                 row.innerHTML = `
-                    <td class="px-6 py-4 font-bold"><input type="number" value="${log.year}" class="w-20" data-field="year"></td>
+                    <td class="px-6 py-4"><input type="number" value="${log.year}" class="w-20" data-field="year"></td>
                     <td class="px-6 py-4"><input type="text" value="${log.notes || ''}" class="w-full text-slate-500" data-field="notes"></td>
                     <td class="px-6 py-4 text-right">£<input type="number" value="${log.amount}" class="w-32 text-right font-bold" data-field="amount"></td>
                     <td class="px-6 py-4 text-right no-print"><button class="text-rose-400 font-bold" onclick="deleteYearlyLog(${log.id})">×</button></td>
@@ -540,98 +582,58 @@
                 }));
                 tbody.appendChild(row);
             });
-            updateComparisonUI();
-        }
-
-        function updateComparisonUI() {
-            let fleetAnnual = 0;
-            wsFleets.forEach(f => {
-                const b = BUNDLES[f.bundle];
-                fleetAnnual += (f.isAlwaysOn ? b.m : (b.hb + f.hours * b.hr)) * f.users * 12;
-            });
-            const latestLog = [...yearlyLogs].sort((a,b) => b.year - a.year)[0]?.amount || 0;
-            const variance = latestLog - fleetAnnual;
-            document.getElementById('comparison-projected').innerText = `£${Math.round(fleetAnnual).toLocaleString()}`;
-            document.getElementById('comparison-actual').innerText = `£${Math.round(latestLog).toLocaleString()}`;
-            const vEl = document.getElementById('comparison-variance');
-            vEl.innerText = `${variance >= 0 ? '+' : '-'}£${Math.abs(Math.round(variance)).toLocaleString()}`;
-            vEl.className = `text-xl font-bold ${variance > 0 ? 'text-rose-600' : 'text-emerald-600'}`;
-        }
-
-        function renderDecomWs() {
-            const tbody = document.getElementById('decom-ws-body');
-            if(!tbody) return;
-            tbody.innerHTML = '';
-            decomWs.forEach(d => {
-                const b = BUNDLES[d.bundle];
-                const row = document.createElement('tr');
-                row.innerHTML = `<td class="px-6 py-4">${d.name}</td><td class="px-6 py-4">${b.name}</td><td class="px-6 py-4 text-center">${d.users}</td><td class="px-6 py-4 text-right font-bold text-emerald-600">£${Math.round(b.m * d.users * 12).toLocaleString()}</td><td class="px-6 py-4 text-right"><button onclick="deleteDecom(${d.id})">×</button></td>`;
-                tbody.appendChild(row);
-            });
         }
 
         function renderAppList() {
             const tbody = document.getElementById('app-list-body');
-            if(!tbody) return;
-            tbody.innerHTML = '';
+            if(!tbody) return; tbody.innerHTML = '';
             apps.forEach(a => {
                 const row = document.createElement('tr');
-                row.innerHTML = `<td class="px-6 py-4">${a.name}</td><td class="px-6 py-4 text-center">${a.isSaving ? 'Saving' : 'Liability'}</td><td class="px-6 py-4 text-right font-bold">£${Math.round(a.price * a.users * 12).toLocaleString()}</td><td class="px-6 py-4 text-right"><button onclick="deleteApp(${a.id})">×</button></td>`;
+                row.className = 'border-b border-slate-50 text-sm';
+                row.innerHTML = `
+                    <td class="px-6 py-4"><input type="text" value="${a.name}" class="w-full" data-field="name"></td>
+                    <td class="px-6 py-4 text-center"><select data-field="type"><option value="liability" ${!a.isSaving ? 'selected' : ''}>Liability</option><option value="saving" ${a.isSaving ? 'selected' : ''}>Saving</option></select></td>
+                    <td class="px-6 py-4 text-right">£<input type="number" value="${a.price}" class="w-24 text-right" data-field="price"></td>
+                    <td class="px-6 py-4 text-right"><button onclick="deleteApp(${a.id})" class="text-rose-400 font-bold">×</button></td>
+                `;
+                row.querySelectorAll('input, select').forEach(el => el.addEventListener('change', (e) => {
+                    const item = apps.find(x => x.id === a.id);
+                    const field = el.dataset.field;
+                    if (field === 'name') item.name = e.target.value;
+                    if (field === 'price') item.price = parseFloat(e.target.value) || 0;
+                    if (field === 'type') item.isSaving = (e.target.value === 'saving');
+                    refreshAll();
+                }));
                 tbody.appendChild(row);
             });
         }
 
-        function saveToLocalStorage() {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify({ wsFleets, decomWs, apps, yearlyLogs, timestamp: Date.now() }));
+        function renderChart(total, opt) {
+            const canvas = document.getElementById('efficiency-chart');
+            const ctx = canvas?.getContext('2d');
+            if(!ctx) return;
+            if (efficiencyChart) efficiencyChart.destroy();
+            efficiencyChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Current Fleet', 'Optimized'],
+                    datasets: [{ label: 'Annual Cost', data: [total, total - opt], backgroundColor: ['#1e293b', '#10b981'], borderRadius: 12, barThickness: 40 }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { callback: v => '£' + v.toLocaleString(), font: { size: 10 } }, grid: { display: false } }, x: { grid: { display: false } } } }
+            });
         }
 
+        function saveToLocalStorage() { localStorage.setItem(STORAGE_KEY, JSON.stringify({ wsFleets, decomWs, apps, yearlyLogs })); }
         function loadFromLocalStorage() {
             const saved = localStorage.getItem(STORAGE_KEY);
-            if (saved) {
-                try {
-                    const data = JSON.parse(saved);
-                    wsFleets = data.wsFleets || [];
-                    decomWs = data.decomWs || [];
-                    apps = data.apps || [];
-                    yearlyLogs = data.yearlyLogs || [];
-                    refreshAll(true);
-                } catch (e) {}
-            }
+            if (saved) { try { const data = JSON.parse(saved); wsFleets = data.wsFleets || []; decomWs = data.decomWs || []; apps = data.apps || []; yearlyLogs = data.yearlyLogs || []; refreshAll(true); } catch (e) {} }
         }
-
-        function loadSettings() {
-            const saved = localStorage.getItem(SETTINGS_KEY);
-            if (saved) {
-                const settings = JSON.parse(saved);
-                isAutoSyncEnabled = !!settings.autoSync;
-                document.getElementById('auto-sync-toggle').checked = isAutoSyncEnabled;
-                updateSyncUI();
-            }
-        }
-
-        function updateSyncUI() {
-            const btn = document.getElementById('btn-push');
-            if (isAutoSyncEnabled) {
-                btn.classList.add('opacity-50', 'pointer-events-none');
-                btn.innerHTML = 'Live Sync Active';
-            } else {
-                btn.classList.remove('opacity-50', 'pointer-events-none');
-                btn.innerHTML = 'Push to Team';
-            }
-        }
-
-        function triggerAutoSync() {
-            if (!isAutoSyncEnabled || !user) return;
-            if (autoSyncTimeout) clearTimeout(autoSyncTimeout);
-            autoSyncTimeout = setTimeout(() => { saveToCloud(true); }, 2000); 
-        }
-
-        function showToast(msg, isError = false, showSpinner = false) {
+        function showToast(msg, isError = false) {
             const toast = document.getElementById('status-toast');
-            document.getElementById('toast-message').innerText = msg;
+            const messageEl = document.getElementById('toast-message');
+            if (messageEl) messageEl.innerText = msg;
             toast.className = `fixed bottom-8 right-8 text-white px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-3 transition-all duration-300 ${isError ? 'bg-rose-600' : 'bg-slate-900'} show`;
-            document.getElementById('toast-spinner').classList.toggle('hidden', !showSpinner);
-            if (!showSpinner) setTimeout(() => toast.classList.remove('show'), 4000);
+            setTimeout(() => toast.classList.remove('show'), 3000);
         }
 
         window.showPage = id => {
@@ -643,25 +645,15 @@
 
         window.addWsFleet = () => { wsFleets.push({ id: Date.now(), name: 'New Fleet', bundle: 'standard', users: 5, hours: 40, isAlwaysOn: false }); refreshAll(); };
         window.deleteWsFleet = id => { wsFleets = wsFleets.filter(f => f.id !== id); refreshAll(); };
-        window.addDecomWs = () => { decomWs.push({ id: Date.now(), name: 'Retired Asset', bundle: 'standard', users: 1, isAlwaysOn: true }); refreshAll(); };
+        window.addDecomWs = () => { decomWs.push({ id: Date.now(), name: 'New Retired Asset', bundle: 'standard', users: 1, hours: 160, isAlwaysOn: true }); refreshAll(); };
         window.deleteDecom = id => { decomWs = decomWs.filter(d => d.id !== id); refreshAll(); };
         window.addNewApp = () => { apps.push({ id: Date.now(), name: 'New App', price: 100, users: 1, isSaving: false }); refreshAll(); };
         window.deleteApp = id => { apps = apps.filter(a => a.id !== id); refreshAll(); };
         window.addYearlyLog = () => { yearlyLogs.push({ id: Date.now(), year: new Date().getFullYear(), amount: 0, notes: '' }); refreshAll(); };
         window.deleteYearlyLog = id => { yearlyLogs = yearlyLogs.filter(l => l.id !== id); refreshAll(); };
 
-        document.getElementById('auto-sync-toggle')?.addEventListener('change', (e) => {
-            isAutoSyncEnabled = e.target.checked;
-            localStorage.setItem(SETTINGS_KEY, JSON.stringify({ autoSync: isAutoSyncEnabled }));
-            updateSyncUI();
-            if (isAutoSyncEnabled) triggerAutoSync();
-        });
         document.getElementById('btn-push')?.addEventListener('click', () => saveToCloud());
-        document.getElementById('btn-refresh')?.addEventListener('click', () => {
-             const ref = getSharedDocRef();
-             if(ref) setupSharedListener();
-        });
-        document.getElementById('btn-reauth')?.addEventListener('click', () => initApp());
+        document.getElementById('btn-refresh')?.addEventListener('click', () => setupSharedListener());
 
         initApp();
     </script>
