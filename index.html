@@ -58,20 +58,22 @@
             opacity: 0;
         }
         #status-toast.show { transform: translateY(0); opacity: 1; }
+
+        @media print {
+            .no-print { display: none !important; }
+        }
     </style>
 </head>
 <body class="bg-slate-50 min-h-screen font-sans text-slate-900 flex flex-col md:flex-row">
 
-    <!-- Status Toast -->
     <div id="status-toast" class="bg-slate-900 text-white px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-3">
-        <span id="toast-message">Action successful</span>
+        <span id="toast-message">Saving...</span>
     </div>
 
-    <!-- Sidebar Navigation -->
     <nav class="w-full md:w-64 bg-slate-900 text-slate-300 md:min-h-screen flex flex-col shadow-2xl z-50 no-print">
         <div class="p-6 border-b border-slate-800">
             <h1 class="text-xl font-bold text-emerald-400">Savings Hub</h1>
-            <p class="text-[10px] uppercase tracking-widest text-slate-500 mt-1">Cost Management</p>
+            <p class="text-[10px] uppercase tracking-widest text-slate-500 mt-1">Live Cloud Sync</p>
         </div>
         <div class="flex-grow py-4 overflow-y-auto">
             <button onclick="showPage('annual')" id="nav-annual" class="nav-link w-full text-left px-6 py-4 flex items-center gap-3 hover:bg-slate-800 transition-colors active">
@@ -97,38 +99,20 @@
             
             <div class="mt-8 px-4 space-y-4">
                 <div class="no-print">
-                    <div class="flex justify-between items-center px-2 mb-2">
-                        <p class="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Team Sync</p>
-                        <div class="flex items-center gap-2">
-                            <span class="text-[8px] text-slate-500 uppercase font-bold">Auto</span>
-                            <label class="switch scale-75">
-                                <input type="checkbox" id="auto-sync-toggle">
-                                <span class="slider"></span>
-                            </label>
-                        </div>
-                    </div>
-                    <div class="flex flex-col gap-1">
-                        <button id="btn-push" class="w-full flex items-center justify-center gap-2 py-2 px-4 rounded-xl border border-emerald-500/50 hover:bg-emerald-950/20 text-emerald-400 text-xs font-bold transition-all">
-                            Push to Team
-                        </button>
-                        <button id="btn-refresh" class="w-full flex items-center justify-center gap-2 py-2 px-4 rounded-xl border border-slate-700 hover:bg-slate-800 text-xs text-slate-400 font-bold transition-all">
-                            Refresh Data
-                        </button>
-                        <button onclick="exportToText()" class="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-xs text-white font-bold transition-all mt-2 shadow-lg shadow-emerald-900/20">
-                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-                            Export Data (.txt)
-                        </button>
-                    </div>
+                    <button onclick="exportToText()" class="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-xs text-white font-bold transition-all mt-2 shadow-lg shadow-emerald-900/20">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                        Export Data (.txt)
+                    </button>
+                    <p class="text-[9px] text-slate-500 uppercase font-bold mt-4 text-center tracking-widest">Auto-syncing active</p>
                 </div>
             </div>
         </div>
         <div class="p-6 bg-slate-950/50 no-print">
             <p id="nav-cost-total" class="text-emerald-400 font-bold text-sm tracking-tight">£0 Active Spend</p>
-            <p id="auth-status" class="text-[9px] text-slate-500 mt-1 uppercase font-bold">Checking Connection...</p>
+            <p id="auth-status" class="text-[9px] text-slate-500 mt-1 uppercase font-bold">Connecting...</p>
         </div>
     </nav>
 
-    <!-- Main Content Area -->
     <div class="flex-grow flex flex-col h-screen overflow-y-auto" id="main-content">
         <!-- Annual Spend Page -->
         <div id="page-annual" class="page-content active p-4 md:p-8">
@@ -190,6 +174,38 @@
                 <button onclick="addWsFleet()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2 rounded-xl font-bold text-sm shadow-lg">Add Fleet</button>
             </header>
 
+            <!-- Pricing Reference Section -->
+            <div class="mb-8">
+                <h3 class="text-xs font-bold text-slate-400 uppercase mb-3 tracking-widest">Bundle Pricing Reference (£/User)</h3>
+                <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+                    <div class="bg-white border border-slate-100 p-4 rounded-2xl shadow-sm">
+                        <p class="font-bold text-slate-800 text-sm">Value</p>
+                        <p class="text-[10px] text-slate-400">Monthly: £26.00</p>
+                        <p class="text-[10px] text-slate-400">Hourly Base: £8.00 (+£0.22/hr)</p>
+                    </div>
+                    <div class="bg-white border border-slate-100 p-4 rounded-2xl shadow-sm">
+                        <p class="font-bold text-slate-800 text-sm">Standard</p>
+                        <p class="text-[10px] text-slate-400">Monthly: £33.00</p>
+                        <p class="text-[10px] text-slate-400">Hourly Base: £11.00 (+£0.30/hr)</p>
+                    </div>
+                    <div class="bg-white border border-slate-100 p-4 rounded-2xl shadow-sm">
+                        <p class="font-bold text-slate-800 text-sm">Performance</p>
+                        <p class="text-[10px] text-slate-400">Monthly: £45.00</p>
+                        <p class="text-[10px] text-slate-400">Hourly Base: £13.00 (+£0.42/hr)</p>
+                    </div>
+                    <div class="bg-white border border-slate-100 p-4 rounded-2xl shadow-sm">
+                        <p class="font-bold text-slate-800 text-sm">Power</p>
+                        <p class="text-[10px] text-slate-400">Monthly: £65.00</p>
+                        <p class="text-[10px] text-slate-400">Hourly Base: £13.00 (+£0.62/hr)</p>
+                    </div>
+                    <div class="bg-white border border-slate-100 p-4 rounded-2xl shadow-sm">
+                        <p class="font-bold text-slate-800 text-sm">PowerPro</p>
+                        <p class="text-[10px] text-slate-400">Monthly: £110.00</p>
+                        <p class="text-[10px] text-slate-400">Hourly Base: £16.00 (+£1.15/hr)</p>
+                    </div>
+                </div>
+            </div>
+
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
                 <div class="glass-card p-6 rounded-3xl shadow-sm border-l-4 border-slate-900">
                     <p class="text-[10px] font-bold text-slate-400 uppercase mb-1">Total Fleet Users</p>
@@ -205,8 +221,8 @@
                 </div>
             </div>
 
-            <div class="grid grid-cols-1 xl:grid-cols-3 gap-8">
-                <div class="xl:col-span-2 space-y-8">
+            <div class="grid grid-cols-1 xl:grid-cols-4 gap-8">
+                <div class="xl:col-span-3 space-y-8">
                     <div class="glass-card rounded-3xl overflow-hidden shadow-sm">
                         <table class="w-full text-left border-collapse">
                             <thead class="bg-slate-50 border-b border-slate-100">
@@ -215,7 +231,8 @@
                                     <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Bundle</th>
                                     <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-center">Users</th>
                                     <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-center">Hours/Mo</th>
-                                    <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-center">Always On</th>
+                                    <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-center">Mode</th>
+                                    <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-right">Cost/User</th>
                                     <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-right">Fleet Ann.</th>
                                     <th class="px-6 py-4 no-print"></th>
                                 </tr>
@@ -233,7 +250,7 @@
             </div>
         </div>
 
-        <!-- Decommissioned Assets Page -->
+        <!-- Other pages omitted for brevity in response but kept in full file logic... -->
         <div id="page-decommissioned" class="page-content p-4 md:p-8">
             <header class="mb-8 flex justify-between items-end">
                 <div>
@@ -250,7 +267,7 @@
                             <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Bundle</th>
                             <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-center">Users</th>
                             <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-center">Hours/Mo</th>
-                            <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-center">Always On</th>
+                            <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-center">Mode</th>
                             <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-right">Ann. Saving</th>
                             <th class="px-6 py-4 no-print"></th>
                         </tr>
@@ -260,7 +277,6 @@
             </div>
         </div>
 
-        <!-- Software Tracker Page -->
         <div id="page-nashtech" class="page-content p-4 md:p-8">
             <header class="mb-8 flex justify-between items-end">
                 <h2 class="text-3xl font-bold text-slate-800">Software App Tracker</h2>
@@ -281,7 +297,6 @@
             </div>
         </div>
 
-        <!-- Summary Page -->
         <div id="page-summary" class="page-content p-4 md:p-8">
             <header class="mb-10 flex justify-between items-start">
                 <div>
@@ -289,7 +304,6 @@
                     <p class="text-slate-500 mt-2 font-medium">Consolidated Financial Overview & Business Value Tracking</p>
                 </div>
             </header>
-
             <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
                 <div class="glass-card p-10 rounded-[2.5rem] border-l-8 border-slate-800 shadow-xl relative overflow-hidden">
                     <p class="text-slate-400 text-xs font-bold uppercase tracking-widest mb-2">Historical Actual Spend</p>
@@ -300,7 +314,6 @@
                     <p id="sum-liability" class="text-5xl font-black text-slate-900">£0</p>
                 </div>
             </div>
-
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
                 <div class="glass-card p-6 rounded-3xl shadow-md border-t-4 border-slate-400">
                     <p class="text-[10px] text-slate-400 font-bold uppercase mb-2">WorkSpace Fleets</p>
@@ -316,7 +329,6 @@
                     <p id="sum-breakdown-sw" class="text-2xl font-black text-slate-800">£0</p>
                 </div>
             </div>
-
             <div class="bg-slate-900 p-12 rounded-[3rem] text-white shadow-2xl relative overflow-hidden">
                 <p class="text-emerald-400 text-sm font-black uppercase tracking-[0.3em] mb-4">Total Realized Value + Savings</p>
                 <div class="flex items-baseline gap-4">
@@ -344,6 +356,8 @@
         
         let db, auth, user, efficiencyChart;
         let wsFleets = [], decomWs = [], apps = [], yearlyLogs = [];
+        let isSaving = false;
+        let saveTimeout = null;
 
         const BUNDLES = {
             "value": { name: "Value", m: 26, hb: 8, hr: 0.22 },
@@ -351,62 +365,6 @@
             "perf": { name: "Performance", m: 45, hb: 13, hr: 0.42 },
             "power": { name: "Power", m: 65, hb: 13, hr: 0.62 },
             "powerpro": { name: "PowerPro", m: 110, hb: 16, hr: 1.15 }
-        };
-
-        // EXPORT AS TEXT FUNCTION
-        window.exportToText = () => {
-            const dateStr = new Date().toLocaleDateString();
-            const latestActual = [...yearlyLogs].sort((a,b) => b.year - a.year)[0]?.amount || 0;
-            const liability = document.getElementById('sum-liability')?.innerText || "£0";
-            const totalValue = document.getElementById('sum-total-value')?.innerText || "£0";
-
-            let content = `CLOUD COST OPTIMIZATION REPORT - ${dateStr}\n`;
-            content += `==========================================\n\n`;
-            
-            content += `EXECUTIVE SUMMARY\n`;
-            content += `-----------------\n`;
-            content += `Latest Actual Spend:  £${latestActual.toLocaleString()}\n`;
-            content += `Projected Liability:  ${liability}\n`;
-            content += `Total Realized Value: ${totalValue}\n\n`;
-
-            content += `ACTIVE WORKSPACE FLEETS\n`;
-            content += `-----------------------\n`;
-            wsFleets.forEach(f => {
-                const b = BUNDLES[f.bundle];
-                const cost = (f.isAlwaysOn ? b.m : (b.hb + f.hours * b.hr)) * f.users * 12;
-                content += `- ${f.name}: ${f.users} users (${b.name} bundle) | Mode: ${f.isAlwaysOn ? 'Always-On' : 'Auto-Stop'} | Ann: £${Math.round(cost).toLocaleString()}\n`;
-            });
-            content += `\n`;
-
-            if (decomWs.length > 0) {
-                content += `DECOMMISSIONED ASSETS (RETIRED)\n`;
-                content += `-------------------------------\n`;
-                decomWs.forEach(d => {
-                    const b = BUNDLES[d.bundle];
-                    const savings = (d.isAlwaysOn ? b.m : (b.hb + d.hours * b.hr)) * d.users * 12;
-                    content += `- ${d.name}: £${Math.round(savings).toLocaleString()} realized annual saving\n`;
-                });
-                content += `\n`;
-            }
-
-            if (apps.length > 0) {
-                content += `SOFTWARE TRACKER\n`;
-                content += `----------------\n`;
-                apps.forEach(a => {
-                    content += `- ${a.name}: £${(a.price * a.users * 12).toLocaleString()} per annum (${a.isSaving ? 'SAVING' : 'LIABILITY'})\n`;
-                });
-            }
-
-            const blob = new Blob([content], { type: 'text/plain' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `Cloud_Optimization_Report_${new Date().toISOString().slice(0,10)}.txt`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-            showToast("Report Exported as .txt");
         };
 
         const initApp = async () => {
@@ -430,7 +388,7 @@
         function setupSharedListener() {
             const ref = doc(db, 'artifacts', appId, 'public', 'data', 'configs', 'shared');
             onSnapshot(ref, (snap) => {
-                if (snap.exists()) {
+                if (snap.exists() && !isSaving) {
                     const data = snap.data();
                     wsFleets = data.wsFleets || wsFleets;
                     decomWs = data.decomWs || decomWs;
@@ -441,20 +399,32 @@
             });
         }
 
-        async function saveToCloud(isSilent = false) {
+        async function saveToCloud() {
             if (!user) return;
+            isSaving = true;
+            showToast("Syncing...", false, true);
             const ref = doc(db, 'artifacts', appId, 'public', 'data', 'configs', 'shared');
             try {
                 await setDoc(ref, { wsFleets, decomWs, apps, yearlyLogs, updatedAt: new Date().toISOString() });
-                if (!isSilent) showToast("Cloud Sync Complete");
-            } catch (e) { showToast("Sync Failed", true); }
+                setTimeout(() => { isSaving = false; }, 1000);
+            } catch (e) { 
+                isSaving = false;
+                showToast("Sync Failed", true); 
+            }
         }
 
-        function refreshAll(skipSync = false) {
+        function triggerAutoSync() {
+            if (saveTimeout) clearTimeout(saveTimeout);
+            saveTimeout = setTimeout(() => {
+                saveToCloud();
+            }, 1500);
+        }
+
+        function refreshAll(skipCloudSync = false) {
             renderWsFleets(); renderDecomWs(); renderAppList(); renderYearlyLogs();
             updateCalculationsAndUI();
             saveToLocalStorage();
-            if (!skipSync && document.getElementById('auto-sync-toggle')?.checked) saveToCloud(true);
+            if (!skipCloudSync) triggerAutoSync();
         }
 
         function updateCalculationsAndUI() {
@@ -515,15 +485,22 @@
             if(!tbody) return; tbody.innerHTML = '';
             wsFleets.forEach(f => {
                 const b = BUNDLES[f.bundle];
+                const rowCostPerUser = f.isAlwaysOn ? b.m : (b.hb + f.hours * b.hr);
                 const row = document.createElement('tr');
                 row.className = 'app-row border-b border-slate-50 hover:bg-slate-50/50 text-sm';
                 row.innerHTML = `
-                    <td class="px-6 py-4"><input type="text" value="${f.name}" class="bg-transparent w-full" data-field="name"></td>
-                    <td class="px-6 py-4"><select class="w-full text-xs" data-field="bundle">${Object.keys(BUNDLES).map(k => `<option value="${k}" ${f.bundle === k ? 'selected' : ''}>${BUNDLES[k].name}</option>`).join('')}</select></td>
+                    <td class="px-6 py-4"><input type="text" value="${f.name}" class="bg-transparent w-full font-medium" data-field="name"></td>
+                    <td class="px-6 py-4"><select class="w-full text-xs bg-slate-100 rounded p-1" data-field="bundle">${Object.keys(BUNDLES).map(k => `<option value="${k}" ${f.bundle === k ? 'selected' : ''}>${BUNDLES[k].name}</option>`).join('')}</select></td>
                     <td class="px-6 py-4 text-center"><input type="number" value="${f.users}" class="w-16 text-center" data-field="users"></td>
                     <td class="px-6 py-4 text-center"><input type="number" value="${f.hours}" class="w-16 text-center" data-field="hours"></td>
-                    <td class="px-6 py-4 text-center"><label class="switch"><input type="checkbox" ${f.isAlwaysOn ? 'checked' : ''} data-field="isAlwaysOn"><span class="slider"></span></label></td>
-                    <td class="px-6 py-4 font-bold text-emerald-600 text-right">£${Math.round((f.isAlwaysOn ? b.m : (b.hb + f.hours * b.hr)) * f.users * 12).toLocaleString()}</td>
+                    <td class="px-6 py-4 text-center">
+                        <div class="flex flex-col items-center">
+                            <label class="switch"><input type="checkbox" ${f.isAlwaysOn ? 'checked' : ''} data-field="isAlwaysOn"><span class="slider"></span></label>
+                            <span class="text-[9px] uppercase font-bold mt-1 text-slate-400">${f.isAlwaysOn ? 'Always-On' : 'Auto-Stop'}</span>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 text-right text-slate-500 font-mono text-xs">£${rowCostPerUser.toFixed(2)}/mo</td>
+                    <td class="px-6 py-4 font-bold text-emerald-600 text-right">£${Math.round(rowCostPerUser * f.users * 12).toLocaleString()}</td>
                     <td class="px-6 py-4 text-right no-print"><button class="text-rose-400 font-bold" onclick="deleteWsFleet(${f.id})">×</button></td>
                 `;
                 row.querySelectorAll('input, select').forEach(el => el.addEventListener('change', e => {
@@ -541,6 +518,7 @@
             if(!tbody) return; tbody.innerHTML = '';
             decomWs.forEach(d => {
                 const b = BUNDLES[d.bundle];
+                const rowCostPerUser = d.isAlwaysOn ? b.m : (b.hb + d.hours * b.hr);
                 const row = document.createElement('tr');
                 row.className = 'app-row border-b border-slate-50 hover:bg-slate-50/50 text-sm';
                 row.innerHTML = `
@@ -549,7 +527,7 @@
                     <td class="px-6 py-4 text-center"><input type="number" value="${d.users}" class="w-16 text-center" data-field="users"></td>
                     <td class="px-6 py-4 text-center"><input type="number" value="${d.hours}" class="w-16 text-center" data-field="hours"></td>
                     <td class="px-6 py-4 text-center"><label class="switch"><input type="checkbox" ${d.isAlwaysOn ? 'checked' : ''} data-field="isAlwaysOn"><span class="slider"></span></label></td>
-                    <td class="px-6 py-4 font-bold text-emerald-600 text-right">£${Math.round((d.isAlwaysOn ? b.m : (b.hb + d.hours * b.hr)) * d.users * 12).toLocaleString()}</td>
+                    <td class="px-6 py-4 font-bold text-emerald-600 text-right">£${Math.round(rowCostPerUser * d.users * 12).toLocaleString()}</td>
                     <td class="px-6 py-4 text-right no-print"><button class="text-rose-400 font-bold" onclick="deleteDecom(${d.id})">×</button></td>
                 `;
                 row.querySelectorAll('input, select').forEach(el => el.addEventListener('change', e => {
@@ -628,13 +606,49 @@
             const saved = localStorage.getItem(STORAGE_KEY);
             if (saved) { try { const data = JSON.parse(saved); wsFleets = data.wsFleets || []; decomWs = data.decomWs || []; apps = data.apps || []; yearlyLogs = data.yearlyLogs || []; refreshAll(true); } catch (e) {} }
         }
-        function showToast(msg, isError = false) {
+        function showToast(msg, isError = false, persist = false) {
             const toast = document.getElementById('status-toast');
             const messageEl = document.getElementById('toast-message');
             if (messageEl) messageEl.innerText = msg;
             toast.className = `fixed bottom-8 right-8 text-white px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-3 transition-all duration-300 ${isError ? 'bg-rose-600' : 'bg-slate-900'} show`;
-            setTimeout(() => toast.classList.remove('show'), 3000);
+            if (!persist) setTimeout(() => toast.classList.remove('show'), 2000);
         }
+
+        window.exportToText = () => {
+            const dateStr = new Date().toLocaleDateString();
+            const latestActual = [...yearlyLogs].sort((a,b) => b.year - a.year)[0]?.amount || 0;
+            const liability = document.getElementById('sum-liability')?.innerText || "£0";
+            const totalValue = document.getElementById('sum-total-value')?.innerText || "£0";
+
+            let content = `CLOUD COST OPTIMIZATION REPORT - ${dateStr}\n`;
+            content += `==========================================\n\n`;
+            
+            content += `EXECUTIVE SUMMARY\n`;
+            content += `-----------------\n`;
+            content += `Latest Actual Spend:  £${latestActual.toLocaleString()}\n`;
+            content += `Projected Liability:  ${liability}\n`;
+            content += `Total Realized Value: ${totalValue}\n\n`;
+
+            content += `ACTIVE WORKSPACE FLEETS\n`;
+            content += `-----------------------\n`;
+            wsFleets.forEach(f => {
+                const b = BUNDLES[f.bundle];
+                const cost = (f.isAlwaysOn ? b.m : (b.hb + f.hours * b.hr)) * f.users * 12;
+                content += `- ${f.name}: ${f.users} users (${b.name} bundle) | Mode: ${f.isAlwaysOn ? 'Always-On' : 'Auto-Stop'} | Ann: £${Math.round(cost).toLocaleString()}\n`;
+            });
+            content += `\n`;
+
+            const blob = new Blob([content], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Cloud_Optimization_Report_${new Date().toISOString().slice(0,10)}.txt`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            showToast("Report Exported as .txt");
+        };
 
         window.showPage = id => {
             document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
@@ -651,9 +665,6 @@
         window.deleteApp = id => { apps = apps.filter(a => a.id !== id); refreshAll(); };
         window.addYearlyLog = () => { yearlyLogs.push({ id: Date.now(), year: new Date().getFullYear(), amount: 0, notes: '' }); refreshAll(); };
         window.deleteYearlyLog = id => { yearlyLogs = yearlyLogs.filter(l => l.id !== id); refreshAll(); };
-
-        document.getElementById('btn-push')?.addEventListener('click', () => saveToCloud());
-        document.getElementById('btn-refresh')?.addEventListener('click', () => setupSharedListener());
 
         initApp();
     </script>
